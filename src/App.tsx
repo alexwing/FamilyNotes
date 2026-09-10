@@ -32,7 +32,7 @@ export function App() {
   const [preferences, setPreferences] = useState<Preferences>({
     theme: "system",
     language: "system",
-    currentDeviceName: "Mi Dispositivo",
+    currentDeviceName: t("common.myDevice"),
     currentDeviceId: "dev-local",
     savedMasterPassword: null,
     vaultFilePath: null,
@@ -287,7 +287,7 @@ export function App() {
           if (legacyFile) {
             const initialVault: VaultProfile = {
               id: "vault-default",
-              name: "Bóveda Familiar",
+              name: t("vaultManager.defaultVaultName"),
               filePath: legacyFile,
               icon: "🛒",
               savedMasterPassword: prefs.savedMasterPassword,
@@ -333,7 +333,7 @@ export function App() {
               await Api.unlockVault(contents, pass);
               const data = await Api.getVaultData();
 
-              const devName = prefs.currentDeviceName || "Mi Dispositivo";
+              const devName = prefs.currentDeviceName || t("common.myDevice");
               const devId = prefs.currentDeviceId;
               if (data.members && data.members.length > 0) {
                 const isMember = data.members.some(
@@ -394,7 +394,7 @@ export function App() {
 
       const newVault: VaultProfile = {
         id: `vault-${Date.now()}`,
-        name: "Bóveda Familiar",
+        name: t("vaultManager.defaultVaultName"),
         filePath,
         icon: "🛒",
         savedMasterPassword: password,

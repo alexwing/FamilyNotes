@@ -20,6 +20,7 @@ const es = {
     add: "Añadir",
     copy: "Copiar",
     paste: "Pegar",
+    myDevice: "Mi Dispositivo",
   },
   nav: {
     lists: "Listas",
@@ -58,6 +59,7 @@ const es = {
     archiveBtn: "Archivar lista",
     deletePermBtn: "Eliminar definitivamente",
     deleteListPermanentlyConfirm: '¿Seguro que deseas eliminar definitivamente "{{name}}"?',
+    toggleArchivedTitle: "Desplegar listas archivadas",
     archivedBadge: "Archivadas ({{count}})",
     archivedTitle: "Lista archivada: {{name}}",
     archivedBannerDesc: "Esta lista está archivada en modo lectura. Puedes desarchivarla para volver a usarla o borrarla definitivamente.",
@@ -234,6 +236,10 @@ const es = {
       qrImportedToast: "¡Configuración FTP importada desde el QR!",
       copiedToast: "Código copiado al portapapeles",
       copyErrorToast: "No se pudo copiar al portapapeles",
+      testSuccessMsg: "¡Conexión FTP y acceso a la carpeta verificados con éxito!",
+      testFailedMsg: "Error de conexión: {{error}}",
+      syncSuccessMsg: "¡Bóveda guardada y subida al FTP con éxito!",
+      syncFailedMsg: "Error al sincronizar: {{error}}",
     },
     security: {
       title: "Seguridad de la Bóveda",
@@ -256,6 +262,8 @@ const es = {
       title: "Dispositivos Familiares",
       subtitle: "Dispositivos registrados y sincronizados con esta bóveda compartida.",
       myDevice: "Este dispositivo",
+      statusOnline: "En línea",
+      statusFtpSync: "Sincronizado FTP",
       lastSeen: "Última actividad: {{date}}",
       deleteDeviceBtn: "Eliminar",
       deleteDeviceTitle: '¿Eliminar dispositivo "{{name}}"?',
@@ -366,6 +374,7 @@ const es = {
     editProfile: "Editar Perfil",
     deleteVault: "Quitar de la lista",
     deleteFileWarning: "Eliminar también el archivo físico del disco",
+    defaultVaultName: "Bóveda Familiar",
     sharedVaultDefaultName: "Bóveda Compartida ({{host}})",
   },
   scanner: {

@@ -418,7 +418,7 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
                 ? "bg-amber-500/15 dark:bg-slate-800 text-amber-700 dark:text-amber-300 border-amber-500/40"
                 : "bg-white/60 dark:bg-slate-900/60 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:text-slate-900 dark:hover:text-slate-300"
             }`}
-            title="Desplegar listas archivadas"
+            title={t("lists.toggleArchivedTitle")}
           >
             <Archive size={13} />
             <span>{t("lists.archivedBadge", { count: archivedLists.length })}</span>

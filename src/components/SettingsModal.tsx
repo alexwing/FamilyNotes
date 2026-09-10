@@ -57,7 +57,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [syncingModal, setSyncingModal] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
-  const [deviceName, setDeviceName] = useState(preferences.currentDeviceName || "Mi Dispositivo");
+  const [deviceName, setDeviceName] = useState(preferences.currentDeviceName || t("common.myDevice"));
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [repeatPassword, setRepeatPassword] = useState("");
@@ -86,10 +86,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     setTestResult(null);
     try {
       await Api.testSync(syncForm);
-      setTestResult({ ok: true, msg: "¡Conexión FTP y acceso a la carpeta verificados con éxito!" });
+      setTestResult({ ok: true, msg: t("settings.ftp.testSuccessMsg") });
     } catch (err: unknown) {
       const errorMsg = err instanceof Error ? err.message : String(err);
-      setTestResult({ ok: false, msg: `Error de conexión: ${errorMsg}` });
+      setTestResult({ ok: false, msg: t("settings.ftp.testFailedMsg", { error: errorMsg }) });
     } finally {
       setTestingSync(false);
     }
@@ -104,10 +104,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         enabled: true,
       };
       await onSaveSync(configToSave);
-      setTestResult({ ok: true, msg: "¡Bóveda guardada y subida al FTP con éxito!" });
+      setTestResult({ ok: true, msg: t("settings.ftp.syncSuccessMsg") });
     } catch (err: unknown) {
       const errorMsg = err instanceof Error ? err.message : String(err);
-      setTestResult({ ok: false, msg: `Error al sincronizar: ${errorMsg}` });
+      setTestResult({ ok: false, msg: t("settings.ftp.syncFailedMsg", { error: errorMsg }) });
     } finally {
       setSyncingModal(false);
     }
@@ -438,7 +438,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   </label>
                   <input
                     type="text"
-                    placeholder="ftp.ejemplo.com"
+                    placeholder={t("settings.ftp.hostPlaceholder")}
                     value={syncForm.host}
                     onChange={(e) =>
                       setSyncForm({ ...syncForm, host: e.target.value })
@@ -668,7 +668,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         <span className="text-xs font-bold text-slate-900 dark:text-white block">
                           {preferences.currentDeviceName} ({t("settings.family.myDevice")})
                         </span>
-                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400">Online</span>
+                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400">
+                          {t("settings.family.statusOnline")}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -686,7 +688,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             <span className="text-xs font-bold text-slate-900 dark:text-white block">
                               {m.name}
                             </span>
-                            <span className="text-[10px] text-slate-500 dark:text-slate-400">FTP Sync</span>
+                            <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                              {t("settings.family.statusFtpSync")}
+                            </span>
                           </div>
                         </div>
 

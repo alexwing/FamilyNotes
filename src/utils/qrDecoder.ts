@@ -25,7 +25,7 @@ export async function decodeQrFromImageFile(file: File): Promise<string> {
           let height = img.naturalHeight || img.height;
 
           if (!width || !height) {
-            reject(new Error("Dimensiones de imagen no válidas."));
+            reject(new Error("Invalid image dimensions."));
             return;
           }
 
@@ -46,7 +46,7 @@ export async function decodeQrFromImageFile(file: File): Promise<string> {
           const ctx = canvas.getContext("2d", { willReadFrequently: true });
 
           if (!ctx) {
-            reject(new Error("No se pudo inicializar el procesador de imágenes (Canvas 2D)."));
+            reject(new Error("Could not initialize 2D canvas context."));
             return;
           }
 

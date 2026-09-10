@@ -20,6 +20,7 @@ const en = {
     add: "Add",
     copy: "Copy",
     paste: "Paste",
+    myDevice: "My Device",
   },
   nav: {
     lists: "Lists",
@@ -58,6 +59,7 @@ const en = {
     archiveBtn: "Archive list",
     deletePermBtn: "Delete permanently",
     deleteListPermanentlyConfirm: 'Are you sure you want to permanently delete "{{name}}"?',
+    toggleArchivedTitle: "Toggle archived lists",
     archivedBadge: "Archived ({{count}})",
     archivedTitle: "Archived list: {{name}}",
     archivedBannerDesc: "This list is read-only. You can unarchive it to use it again or delete it permanently.",
@@ -234,6 +236,10 @@ const en = {
       qrImportedToast: "FTP configuration imported from QR!",
       copiedToast: "Code copied to clipboard",
       copyErrorToast: "Could not copy to clipboard",
+      testSuccessMsg: "FTP connection and folder access verified successfully!",
+      testFailedMsg: "Connection error: {{error}}",
+      syncSuccessMsg: "Vault saved and uploaded to FTP successfully!",
+      syncFailedMsg: "Sync error: {{error}}",
     },
     security: {
       title: "Vault Security",
@@ -256,6 +262,8 @@ const en = {
       title: "Family Devices",
       subtitle: "Devices registered and connected to this shared vault.",
       myDevice: "This device",
+      statusOnline: "Online",
+      statusFtpSync: "FTP Sync",
       lastSeen: "Last active: {{date}}",
       deleteDeviceBtn: "Delete",
       deleteDeviceTitle: 'Delete device "{{name}}"?',
@@ -366,6 +374,7 @@ const en = {
     editProfile: "Edit Profile",
     deleteVault: "Remove from list",
     deleteFileWarning: "Also delete vault file from disk",
+    defaultVaultName: "Family Vault",
     sharedVaultDefaultName: "Shared Vault ({{host}})",
   },
   scanner: {
