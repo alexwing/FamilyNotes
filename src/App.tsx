@@ -40,10 +40,11 @@ export function App() {
     vaults: [],
   });
 
+  const [isInitializing, setIsInitializing] = useState(true);
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [vaultData, setVaultData] = useState<VaultData | null>(null);
   const [activeTab, setActiveTab] = useState<"lists" | "notes" | "history">("lists");
-  const [selectedListId, setSelectedListId] = useState("");
+  const [selectedListId, setSelectedListId] = useState("ALL_LISTS");
   const [syncing, setSyncing] = useState(false);
 
   // Modals
@@ -124,8 +125,9 @@ export function App() {
       setVaultData(data);
       if (data.shoppingLists.length > 0) {
         setSelectedListId((curr) => {
+          if (curr === "ALL_LISTS") return curr;
           const found = data.shoppingLists.some((l) => l.id === curr);
-          return found ? curr : data.shoppingLists[0].id;
+          return found ? curr : "ALL_LISTS";
         });
       }
     } catch (e) {
@@ -379,6 +381,8 @@ export function App() {
       } catch (err) {
         console.error("App init error:", err);
         setIsOnboardingOpen(true);
+      } finally {
+        setIsInitializing(false);
       }
     };
 
@@ -850,13 +854,18 @@ export function App() {
   };
 
   const handleClearCompleted = async (listId: string) => {
+    const isAll = listId === "ALL_LISTS";
+    const targetListIds = isAll
+      ? (vaultData?.shoppingLists || []).filter((l) => !l.archived).map((l) => l.id)
+      : [listId];
+
     // 1. Optimistic instant UI removal
     setVaultData((prev) => {
       if (!prev) return prev;
       return {
         ...prev,
         shoppingLists: prev.shoppingLists.map((l) =>
-          l.id === listId
+          targetListIds.includes(l.id)
             ? { ...l, items: l.items.filter((i) => !i.checked) }
             : l
         ),
@@ -864,8 +873,13 @@ export function App() {
     });
 
     try {
-      const snap = await Api.clearCompletedItems(listId);
-      await persistVaultFile(snap.contents);
+      let lastSnap = null;
+      for (const id of targetListIds) {
+        lastSnap = await Api.clearCompletedItems(id);
+      }
+      if (lastSnap) {
+        await persistVaultFile(lastSnap.contents);
+      }
       showToast("Comprados vaciados", "🧹");
       scheduleDebouncedSync();
     } catch (e) {
@@ -1203,6 +1217,23 @@ export function App() {
     preferences.vaults.find((v) => v.id === preferences.activeVaultId) ||
     preferences.vaults[0] ||
     null;
+
+  // Render App Initializing Splash (prevents password screen flicker during auto-unlock)
+  if (isInitializing) {
+    return (
+      <div className="fixed inset-0 bg-slate-100 dark:bg-slate-950 flex flex-col items-center justify-center p-4 transition-colors z-50">
+        <div className="flex flex-col items-center space-y-4 animate-in fade-in duration-300">
+          <img
+            src="/icon.png"
+            alt="FamilyNotes"
+            className="w-20 h-20 rounded-3xl shadow-xl shadow-emerald-500/25 animate-pulse"
+          />
+          <h1 className="text-xl font-bold text-slate-800 dark:text-white tracking-tight">FamilyNotes</h1>
+          <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+        </div>
+      </div>
+    );
+  }
 
   // Render Manual Unlock Screen
   if (!isUnlocked) {

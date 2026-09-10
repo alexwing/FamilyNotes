@@ -10,6 +10,7 @@ import {
   Edit3,
   Archive,
   ArchiveRestore,
+  Layers,
 } from "lucide-react";
 import { PurchaseHistoryItem, ShoppingList, ProductCatalogItem } from "../types";
 import { AmazonAutoComplete } from "./AmazonAutoComplete";
@@ -209,24 +210,85 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
     window.addEventListener("pointercancel", onGlobalPointerUp);
   };
 
-  const currentList =
-    lists.find((l) => l.id === selectedListId) || activeLists[0] || archivedLists[0] || lists[0];
+  const isAllListsSelected = selectedListId === "ALL_LISTS";
+  const [targetAddListId, setTargetAddListId] = useState<string>("");
 
-  const isCurrentArchived = !!currentList?.archived;
+  React.useEffect(() => {
+    if (activeLists.length > 0) {
+      setTargetAddListId((prev) => {
+        const found = activeLists.some((l) => l.id === prev);
+        return found ? prev : activeLists[0].id;
+      });
+    }
+  }, [activeLists]);
 
-  const pendingItems = (currentList?.items || []).filter((i) => !i.checked);
-  const completedItems = (currentList?.items || []).filter((i) => i.checked);
+  const currentList = isAllListsSelected
+    ? null
+    : lists.find((l) => l.id === selectedListId) || activeLists[0] || archivedLists[0] || lists[0];
+
+  const effectiveAddListId = isAllListsSelected
+    ? targetAddListId || activeLists[0]?.id || ""
+    : currentList?.id || "";
+
+  const isCurrentArchived = !isAllListsSelected && !!currentList?.archived;
+
+  // Flatten pending and completed items across all active lists
+  const allPendingItems = React.useMemo(() => {
+    return activeLists.flatMap((l) =>
+      l.items
+        .filter((i) => !i.checked)
+        .map((i) => ({
+          ...i,
+          parentListId: l.id,
+          parentListName: l.name,
+          parentListColor: l.color,
+        }))
+    );
+  }, [activeLists]);
+
+  const allCompletedItems = React.useMemo(() => {
+    return activeLists.flatMap((l) =>
+      l.items
+        .filter((i) => i.checked)
+        .map((i) => ({
+          ...i,
+          parentListId: l.id,
+          parentListName: l.name,
+          parentListColor: l.color,
+        }))
+    );
+  }, [activeLists]);
+
+  const pendingItems = isAllListsSelected
+    ? allPendingItems
+    : (currentList?.items || []).filter((i) => !i.checked).map((i) => ({
+        ...i,
+        parentListId: currentList!.id,
+        parentListName: currentList!.name,
+        parentListColor: currentList!.color,
+      }));
+
+  const completedItems = isAllListsSelected
+    ? allCompletedItems
+    : (currentList?.items || []).filter((i) => i.checked).map((i) => ({
+        ...i,
+        parentListId: currentList!.id,
+        parentListName: currentList!.name,
+        parentListColor: currentList!.color,
+      }));
 
   const replenishmentAlerts = React.useMemo(() => {
-    if (!currentList || isCurrentArchived) return [];
+    if (isCurrentArchived) return [];
     return history.filter((h) => {
-      const alreadyInList = currentList.items.some(
-        (i) => i.text.toLowerCase() === h.text.toLowerCase() && !i.checked
-      );
+      const alreadyInList = isAllListsSelected
+        ? allPendingItems.some((i) => i.text.toLowerCase() === h.text.toLowerCase())
+        : (currentList?.items || []).some(
+            (i) => i.text.toLowerCase() === h.text.toLowerCase() && !i.checked
+          );
       if (alreadyInList) return false;
       return h.count >= 5;
     });
-  }, [history, currentList, isCurrentArchived]);
+  }, [history, currentList, isCurrentArchived, isAllListsSelected, allPendingItems]);
 
   const handleCreateListSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -256,8 +318,33 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
     <div className="flex-1 flex flex-col overflow-y-auto min-h-0 max-w-5xl mx-auto w-full p-3 sm:p-6 space-y-3 sm:space-y-4">
       {/* 1. LISTS SELECTOR (WRAPS IN MULTIPLE ROWS) */}
       <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 shrink-0">
+        {/* Pestaña 'Todas' - Fija al inicio, no arrastrable */}
+        {activeLists.length > 0 && (
+          <button
+            type="button"
+            onClick={() => onSelectList("ALL_LISTS")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition-all border select-none cursor-pointer shrink-0 ${
+              isAllListsSelected
+                ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-white border-indigo-500 shadow-md ring-1 ring-indigo-500/30"
+                : "bg-white/80 dark:bg-slate-900/80 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:text-slate-900 dark:hover:text-slate-200 hover:border-slate-300 dark:hover:border-slate-700"
+            }`}
+          >
+            <Layers size={14} className={isAllListsSelected ? "text-indigo-500" : "text-slate-400"} />
+            <span>{t("lists.all") || "Todas"}</span>
+            <span
+              className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                allPendingItems.length > 0
+                  ? "bg-indigo-500/20 text-indigo-600 dark:text-indigo-400"
+                  : "bg-slate-200 dark:bg-slate-800 text-slate-500"
+              }`}
+            >
+              {allPendingItems.length}
+            </span>
+          </button>
+        )}
+
         {activeLists.map((list) => {
-          const isSelected = list.id === currentList?.id;
+          const isSelected = !isAllListsSelected && list.id === currentList?.id;
           const pendCount = list.items.filter((i) => !i.checked).length;
           const isBeingDragged = draggedListId === list.id;
 
@@ -621,7 +708,7 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
               </div>
               <button
                 onClick={() =>
-                  onAddItem(currentList.id, alert.text, alert.emoji, alert.category)
+                  onAddItem(effectiveAddListId, alert.text, alert.emoji, alert.category)
                 }
                 className="px-3 py-1.5 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs rounded-xl shrink-0 shadow-md transition cursor-pointer"
               >
@@ -634,15 +721,44 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
 
       {/* 3. SEARCH & ADD BAR WITH LIVE AUTOCOMPLETE */}
       {!isCurrentArchived && (
-        <div className="shrink-0">
+        <div className="shrink-0 space-y-1.5">
+          {isAllListsSelected && activeLists.length > 1 && (
+            <div className="flex items-center gap-1.5 overflow-x-auto py-1 hide-scrollbar">
+              <span className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold shrink-0">
+                {t("lists.addToList") || "Añadir a:"}
+              </span>
+              {activeLists.map((l) => {
+                const isTarget = effectiveAddListId === l.id;
+                return (
+                  <button
+                    key={l.id}
+                    type="button"
+                    onClick={() => setTargetAddListId(l.id)}
+                    className={`text-[11px] px-2.5 py-0.5 rounded-full font-bold border transition cursor-pointer shrink-0 ${
+                      isTarget
+                        ? "text-white shadow-sm"
+                        : "bg-white/70 dark:bg-slate-900/70 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:text-slate-900 dark:hover:text-slate-200"
+                    }`}
+                    style={isTarget ? { backgroundColor: l.color, borderColor: l.color } : {}}
+                  >
+                    {l.name}
+                  </button>
+                );
+              })}
+            </div>
+          )}
           <AmazonAutoComplete
             history={history}
             customCatalog={customCatalog}
             onOpenCatalogModal={onOpenCatalogModal}
             onAddItem={(text, emoji, category, addToDictionary) =>
-              onAddItem(currentList.id, text, emoji, category, addToDictionary)
+              onAddItem(effectiveAddListId, text, emoji, category, addToDictionary)
             }
-            placeholder={t("lists.searchPlaceholder", { name: currentList.name })}
+            placeholder={
+              isAllListsSelected
+                ? t("lists.searchPlaceholderAll") || "Añadir artículo a la compra..."
+                : t("lists.searchPlaceholder", { name: currentList?.name || "" })
+            }
           />
         </div>
       )}
@@ -667,6 +783,8 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
                   ? t("lists.emptyPending")
                   : isCurrentArchived
                   ? t("lists.emptyPendingArchived")
+                  : isAllListsSelected
+                  ? "No hay productos pendientes en ninguna lista."
                   : t("lists.emptyListHint")}
               </p>
             </div>
@@ -680,7 +798,7 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
                   <div
                     onClick={() => {
                       if (!isCurrentArchived) {
-                        onToggleItem(currentList.id, item.id);
+                        onToggleItem(item.parentListId || currentList?.id || "", item.id);
                       }
                     }}
                     className={`flex items-center gap-3 flex-1 ${isCurrentArchived ? "cursor-default" : "cursor-pointer"}`}
@@ -698,9 +816,23 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
                     <div className="flex items-center gap-2.5">
                       <span className="text-xl">{item.emoji || "🛒"}</span>
                       <div>
-                        <span className="text-sm font-semibold text-slate-800 dark:text-slate-200 block">
-                          {item.text}
-                        </span>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-semibold text-slate-800 dark:text-slate-200 block">
+                            {item.text}
+                          </span>
+                          {isAllListsSelected && item.parentListName && (
+                            <span
+                              className="text-[10px] px-2 py-0.5 rounded-md font-bold shrink-0 border shadow-xs"
+                              style={{
+                                backgroundColor: `${item.parentListColor}15`,
+                                borderColor: `${item.parentListColor}40`,
+                                color: item.parentListColor,
+                              }}
+                            >
+                              {item.parentListName}
+                            </span>
+                          )}
+                        </div>
                         <div className="flex items-center gap-2 text-[10px] text-slate-500 dark:text-slate-400">
                           {item.quantity && (
                             <span className="text-emerald-600 dark:text-emerald-400 font-medium">
@@ -716,7 +848,7 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
 
                   {!isCurrentArchived && (
                     <button
-                      onClick={() => onDeleteItem(currentList.id, item.id)}
+                      onClick={() => onDeleteItem(item.parentListId || currentList?.id || "", item.id)}
                       title={t("lists.deleteItemTitle")}
                       className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
                     >
@@ -741,7 +873,7 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
               </h3>
               {!isCurrentArchived && (
                 <button
-                  onClick={() => onClearCompleted(currentList.id)}
+                  onClick={() => onClearCompleted(isAllListsSelected ? "ALL_LISTS" : currentList!.id)}
                   className="text-[11px] text-rose-500/80 hover:text-rose-500 font-semibold transition cursor-pointer"
                 >
                   {t("lists.clearCompleted")}
@@ -758,7 +890,7 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
                   <div
                     onClick={() => {
                       if (!isCurrentArchived) {
-                        onToggleItem(currentList.id, item.id);
+                        onToggleItem(item.parentListId || currentList?.id || "", item.id);
                       }
                     }}
                     className={`flex items-center gap-3 flex-1 ${isCurrentArchived ? "cursor-default" : "cursor-pointer"}`}
@@ -774,9 +906,23 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
                     <div className="flex items-center gap-2.5">
                       <span className="text-lg opacity-75">{item.emoji || "🛒"}</span>
                       <div>
-                        <span className="text-sm font-medium text-slate-500 dark:text-slate-400 line-through block">
-                          {item.text}
-                        </span>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-medium text-slate-500 dark:text-slate-400 line-through block">
+                            {item.text}
+                          </span>
+                          {isAllListsSelected && item.parentListName && (
+                            <span
+                              className="text-[9px] px-1.5 py-0.2 rounded-md font-semibold shrink-0 border opacity-75"
+                              style={{
+                                backgroundColor: `${item.parentListColor}15`,
+                                borderColor: `${item.parentListColor}40`,
+                                color: item.parentListColor,
+                              }}
+                            >
+                              {item.parentListName}
+                            </span>
+                          )}
+                        </div>
                         <span className="text-[10px] text-slate-400 dark:text-slate-500">
                           {item.checkedBy ? `${t("lists.completed")} por ${item.checkedBy}` : t("lists.completed")}
                         </span>
@@ -785,7 +931,7 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
                   </div>
 
                   <button
-                    onClick={() => onDeleteItem(currentList.id, item.id)}
+                    onClick={() => onDeleteItem(item.parentListId || currentList?.id || "", item.id)}
                     title={t("common.delete")}
                     className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 transition cursor-pointer"
                   >
