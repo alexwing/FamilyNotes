@@ -212,53 +212,57 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           <button
             type="button"
             onClick={() => setActiveTab("general")}
+            title={t("settings.tabGeneral")}
             className={`flex items-center justify-center gap-1.5 py-2 sm:py-2.5 px-1 sm:px-3 rounded-xl text-xs font-bold transition cursor-pointer ${
               activeTab === "general"
                 ? "bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-sm border border-slate-200 dark:border-slate-700/60"
                 : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-slate-900/40"
             }`}
           >
-            <Sliders size={14} className="shrink-0" />
-            <span className="truncate">{t("settings.tabGeneral")}</span>
+            <Sliders size={16} className="shrink-0" />
+            <span className="hidden sm:inline truncate">{t("settings.tabGeneral")}</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab("ftp")}
+            title={t("settings.tabFtp")}
             className={`flex items-center justify-center gap-1.5 py-2 sm:py-2.5 px-1 sm:px-3 rounded-xl text-xs font-bold transition cursor-pointer ${
               activeTab === "ftp"
                 ? "bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-sm border border-slate-200 dark:border-slate-700/60"
                 : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-slate-900/40"
             }`}
           >
-            <Server size={14} className="shrink-0" />
-            <span className="truncate">{t("settings.tabFtp")}</span>
+            <Server size={16} className="shrink-0" />
+            <span className="hidden sm:inline truncate">{t("settings.tabFtp")}</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab("security")}
+            title={t("settings.tabSecurity")}
             className={`flex items-center justify-center gap-1.5 py-2 sm:py-2.5 px-1 sm:px-3 rounded-xl text-xs font-bold transition cursor-pointer ${
               activeTab === "security"
                 ? "bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-sm border border-slate-200 dark:border-slate-700/60"
                 : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-slate-900/40"
             }`}
           >
-            <Shield size={14} className="shrink-0" />
-            <span className="truncate">{t("settings.tabSecurity")}</span>
+            <Shield size={16} className="shrink-0" />
+            <span className="hidden sm:inline truncate">{t("settings.tabSecurity")}</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab("family")}
+            title={t("settings.tabFamily")}
             className={`flex items-center justify-center gap-1.5 py-2 sm:py-2.5 px-1 sm:px-3 rounded-xl text-xs font-bold transition cursor-pointer ${
               activeTab === "family"
                 ? "bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-sm border border-slate-200 dark:border-slate-700/60"
                 : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-slate-900/40"
             }`}
           >
-            <Smartphone size={14} className="shrink-0" />
-            <span className="truncate">{t("settings.tabFamily")}</span>
+            <Smartphone size={16} className="shrink-0" />
+            <span className="hidden sm:inline truncate">{t("settings.tabFamily")}</span>
           </button>
         </div>
 
