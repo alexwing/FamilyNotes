@@ -5,6 +5,7 @@ import {
   matchProduct,
   BUILTIN_DICTIONARY,
   CATEGORIES,
+  getCategoryLabel,
   normalizeText,
 } from "../utils/productDictionary";
 import { useTranslation } from "../context/LanguageContext";
@@ -209,7 +210,7 @@ export const AmazonAutoComplete: React.FC<AmazonAutoCompleteProps> = ({
               setShowEmojiMenu(false);
               setIsOpen(false);
             }}
-            title={activeCategory}
+            title={getCategoryLabel(activeCategory, t)}
             className={`flex items-center gap-1 text-[11px] font-medium py-1 px-2 rounded-xl transition cursor-pointer border ${
               customCategory
                 ? "bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/40 shadow-sm"
@@ -220,7 +221,7 @@ export const AmazonAutoComplete: React.FC<AmazonAutoCompleteProps> = ({
           >
             <span className="text-xs shrink-0">{currentCatObj?.emoji || "🏷️"}</span>
             <span className="max-w-[60px] sm:max-w-[95px] truncate font-semibold">
-              {activeCategory}
+              {getCategoryLabel(activeCategory, t)}
             </span>
             <ChevronDown size={11} className="shrink-0 opacity-60" />
           </button>
@@ -247,7 +248,7 @@ export const AmazonAutoComplete: React.FC<AmazonAutoCompleteProps> = ({
                 >
                   <span className="flex items-center gap-2 truncate">
                     <span>{cat.emoji}</span>
-                    <span className="truncate">{cat.name}</span>
+                    <span className="truncate">{getCategoryLabel(cat.id, t)}</span>
                   </span>
                   {activeCategory === cat.id && <Check size={12} className="shrink-0" />}
                 </button>
@@ -292,7 +293,7 @@ export const AmazonAutoComplete: React.FC<AmazonAutoCompleteProps> = ({
                           {item.text}
                         </span>
                         <span className="text-[10px] text-slate-500 dark:text-slate-400">
-                          {t("history.timesPurchased", { count: item.count })} • {item.category}
+                          {t("history.timesPurchased", { count: item.count })} • {getCategoryLabel(item.category, t)}
                         </span>
                       </div>
                     </div>
@@ -313,7 +314,7 @@ export const AmazonAutoComplete: React.FC<AmazonAutoCompleteProps> = ({
                   <BookOpen size={11} />
                   <span>{t("nav.dictionary")}</span>
                 </span>
-                <span className="text-slate-400 dark:text-slate-500">Catálogo</span>
+                <span className="text-slate-400 dark:text-slate-500">{t("nav.dictionary")}</span>
               </div>
               <div className="space-y-0.5 mt-1">
                 {catalogMatches.map((item, idx) => (
@@ -328,7 +329,7 @@ export const AmazonAutoComplete: React.FC<AmazonAutoCompleteProps> = ({
                         <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 block group-hover:text-black dark:group-hover:text-white">
                           {item.name}
                         </span>
-                        <span className="text-[10px] text-purple-600 dark:text-purple-400/80">{item.category}</span>
+                        <span className="text-[10px] text-purple-600 dark:text-purple-400/80">{getCategoryLabel(item.category, t)}</span>
                       </div>
                     </div>
                     <span className="text-xs font-bold text-purple-600 dark:text-purple-400 opacity-0 group-hover:opacity-100 transition">

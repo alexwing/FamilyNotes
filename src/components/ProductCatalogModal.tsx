@@ -11,7 +11,8 @@ import {
   Check,
 } from "lucide-react";
 import { ProductCatalogItem } from "../types";
-import { BUILTIN_DICTIONARY, CATEGORIES } from "../utils/productDictionary";
+import { BUILTIN_DICTIONARY, CATEGORIES, getCategoryLabel } from "../utils/productDictionary";
+import { useTranslation } from "../context/LanguageContext";
 
 interface ProductCatalogModalProps {
   isOpen: boolean;
@@ -38,6 +39,7 @@ export const ProductCatalogModal: React.FC<ProductCatalogModalProps> = ({
   onUpsertItem,
   onDeleteItem,
 }) => {
+  const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [isAddingNew, setIsAddingNew] = useState(false);
@@ -113,13 +115,13 @@ export const ProductCatalogModal: React.FC<ProductCatalogModalProps> = ({
             </div>
             <div>
               <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <span>Diccionario de Productos</span>
+                <span>{t("catalog.title")}</span>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/10 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-500/20 dark:border-purple-500/30">
-                  {customCatalog.length + BUILTIN_DICTIONARY.length} productos
+                  {t("catalog.productCount", { count: customCatalog.length + BUILTIN_DICTIONARY.length })}
                 </span>
               </h3>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                Asigna iconos y categorías automáticas al escribir en la lista de la compra
+                {t("catalog.subtitle")}
               </p>
             </div>
           </div>
@@ -139,7 +141,7 @@ export const ProductCatalogModal: React.FC<ProductCatalogModalProps> = ({
               <Search size={15} className="text-slate-400 dark:text-slate-500 shrink-0" />
               <input
                 type="text"
-                placeholder="Buscar por nombre o palabra clave (ej: 'leche', 'fruta')..."
+                placeholder={t("catalog.searchPlaceholder")}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full bg-transparent outline-none text-xs placeholder-slate-400 dark:placeholder-slate-500"
@@ -161,8 +163,8 @@ export const ProductCatalogModal: React.FC<ProductCatalogModalProps> = ({
               className="px-3.5 py-2 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition shadow-md shadow-purple-600/20 shrink-0 cursor-pointer"
             >
               <Plus size={15} />
-              <span className="hidden sm:inline">Añadir Producto</span>
-              <span className="sm:hidden">Añadir</span>
+              <span className="hidden sm:inline">{t("catalog.addProduct")}</span>
+              <span className="sm:hidden">{t("catalog.addBtn")}</span>
             </button>
           </div>
 
@@ -177,7 +179,7 @@ export const ProductCatalogModal: React.FC<ProductCatalogModalProps> = ({
                   : "bg-slate-200/80 hover:bg-slate-300 dark:bg-slate-800/80 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
               }`}
             >
-              Todos ({customCatalog.length + BUILTIN_DICTIONARY.length})
+              {t("categories.all")} ({customCatalog.length + BUILTIN_DICTIONARY.length})
             </button>
             {CATEGORIES.map((c) => (
               <button
@@ -191,7 +193,7 @@ export const ProductCatalogModal: React.FC<ProductCatalogModalProps> = ({
                 }`}
               >
                 <span>{c.emoji}</span>
-                <span>{c.name}</span>
+                <span>{getCategoryLabel(c.id, t)}</span>
               </button>
             ))}
           </div>
@@ -206,21 +208,23 @@ export const ProductCatalogModal: React.FC<ProductCatalogModalProps> = ({
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-purple-700 dark:text-purple-300 flex items-center gap-1.5">
                 <Sparkles size={14} />
-                <span>Nuevo producto en el diccionario familiar</span>
+                <span>{t("catalog.newProductTitle")}</span>
               </span>
               <button
                 type="button"
                 onClick={() => setIsAddingNew(false)}
                 className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white cursor-pointer"
               >
-                Cancelar
+                {t("common.cancel")}
               </button>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
               {/* Emoji selector */}
               <div className="relative">
-                <label className="text-[10px] text-slate-600 dark:text-slate-400 font-bold block mb-1">EMOJI</label>
+                <label className="text-[10px] text-slate-600 dark:text-slate-400 font-bold block mb-1">
+                  {t("catalog.emojiLabel")}
+                </label>
                 <button
                   type="button"
                   onClick={() => setShowEmojiPicker(!showEmojiPicker)}
@@ -252,12 +256,12 @@ export const ProductCatalogModal: React.FC<ProductCatalogModalProps> = ({
               {/* Name */}
               <div className="sm:col-span-2">
                 <label className="text-[10px] text-slate-600 dark:text-slate-400 font-bold block mb-1">
-                  NOMBRE DEL PRODUCTO
+                  {t("catalog.productNameLabel")}
                 </label>
                 <input
                   type="text"
                   autoFocus
-                  placeholder="Ej: Kéfir de fresa, Harina de fuerza..."
+                  placeholder={t("catalog.productNamePlaceholder")}
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white outline-none focus:border-purple-500"
@@ -266,7 +270,9 @@ export const ProductCatalogModal: React.FC<ProductCatalogModalProps> = ({
 
               {/* Category */}
               <div>
-                <label className="text-[10px] text-slate-600 dark:text-slate-400 font-bold block mb-1">CATEGORÍA</label>
+                <label className="text-[10px] text-slate-600 dark:text-slate-400 font-bold block mb-1">
+                  {t("catalog.categoryLabel")}
+                </label>
                 <select
                   value={newCategory}
                   onChange={(e) => setNewCategory(e.target.value)}
@@ -274,7 +280,7 @@ export const ProductCatalogModal: React.FC<ProductCatalogModalProps> = ({
                 >
                   {CATEGORIES.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.emoji} {c.name}
+                      {c.emoji} {getCategoryLabel(c.id, t)}
                     </option>
                   ))}
                 </select>
@@ -284,17 +290,17 @@ export const ProductCatalogModal: React.FC<ProductCatalogModalProps> = ({
             {/* Keywords */}
             <div>
               <label className="text-[10px] text-slate-600 dark:text-slate-400 font-bold block mb-1">
-                PALABRAS CLAVE ASOCIADAS (separadas por coma)
+                {t("catalog.keywordsLabel")}
               </label>
               <input
                 type="text"
-                placeholder="Ej: kefir, fermentado, lacteo, fresa"
+                placeholder={t("catalog.keywordsPlaceholder")}
                 value={newKeywords}
                 onChange={(e) => setNewKeywords(e.target.value)}
                 className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-900 dark:text-white outline-none focus:border-purple-500"
               />
               <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 block">
-                Al escribir cualquiera de estas palabras al añadir un producto, se aplicará este emoji y categoría automáticamente.
+                {t("catalog.keywordsHelp")}
               </span>
             </div>
 
@@ -305,7 +311,7 @@ export const ProductCatalogModal: React.FC<ProductCatalogModalProps> = ({
                 className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl text-xs transition shadow-md disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
               >
                 <Check size={14} />
-                <span>{isSaving ? "Guardando..." : "Guardar en la Bóveda"}</span>
+                <span>{isSaving ? t("catalog.savingBtn") : t("catalog.saveBtn")}</span>
               </button>
             </div>
           </form>
@@ -319,9 +325,9 @@ export const ProductCatalogModal: React.FC<ProductCatalogModalProps> = ({
               <div className="flex items-center justify-between text-xs text-purple-700 dark:text-purple-300 font-bold uppercase tracking-wider px-1">
                 <span className="flex items-center gap-1.5">
                   <Sparkles size={13} className="text-purple-600 dark:text-purple-400" />
-                  <span>Personalizados de tu familia ({filteredCustom.length})</span>
+                  <span>{t("catalog.customTitle", { count: filteredCustom.length })}</span>
                 </span>
-                <span className="text-[10px] text-slate-500">Sincronizados en la bóveda</span>
+                <span className="text-[10px] text-slate-500">{t("catalog.customSubtitle")}</span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -335,7 +341,9 @@ export const ProductCatalogModal: React.FC<ProductCatalogModalProps> = ({
                       <div>
                         <span className="text-xs font-bold text-slate-900 dark:text-white block">{item.name}</span>
                         <div className="flex items-center gap-2 text-[10px] text-slate-500 dark:text-slate-400">
-                          <span className="text-purple-600 dark:text-purple-400 font-medium">{item.category}</span>
+                          <span className="text-purple-600 dark:text-purple-400 font-medium">
+                            {getCategoryLabel(item.category, t)}
+                          </span>
                           {item.keywords && item.keywords.length > 0 && (
                             <span>• {item.keywords.slice(0, 3).join(", ")}</span>
                           )}
@@ -346,7 +354,7 @@ export const ProductCatalogModal: React.FC<ProductCatalogModalProps> = ({
                     <button
                       type="button"
                       onClick={() => onDeleteItem(item.id)}
-                      title="Eliminar producto personalizado"
+                      title={t("catalog.deleteCustomTitle")}
                       className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition cursor-pointer"
                     >
                       <Trash2 size={14} />
@@ -362,7 +370,7 @@ export const ProductCatalogModal: React.FC<ProductCatalogModalProps> = ({
             <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400 font-bold uppercase tracking-wider px-1">
               <span className="flex items-center gap-1.5">
                 <Tag size={13} />
-                <span>Catálogo general predefinido ({filteredBuiltin.length})</span>
+                <span>{t("catalog.builtinTitle", { count: filteredBuiltin.length })}</span>
               </span>
             </div>
 
@@ -379,7 +387,7 @@ export const ProductCatalogModal: React.FC<ProductCatalogModalProps> = ({
                         {item.name}
                       </span>
                       <div className="flex items-center gap-2 text-[10px] text-slate-500">
-                        <span>{item.category}</span>
+                        <span>{getCategoryLabel(item.category, t)}</span>
                         <span>• {item.keywords.slice(0, 3).join(", ")}</span>
                       </div>
                     </div>

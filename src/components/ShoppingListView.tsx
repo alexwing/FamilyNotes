@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { PurchaseHistoryItem, ShoppingList, ProductCatalogItem } from "../types";
 import { AmazonAutoComplete } from "./AmazonAutoComplete";
+import { getCategoryLabel } from "../utils/productDictionary";
 import { useTranslation } from "../context/LanguageContext";
 
 interface ShoppingListViewProps {
@@ -784,7 +785,7 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
                   : isCurrentArchived
                   ? t("lists.emptyPendingArchived")
                   : isAllListsSelected
-                  ? "No hay productos pendientes en ninguna lista."
+                  ? t("lists.emptyPendingAll")
                   : t("lists.emptyListHint")}
               </p>
             </div>
@@ -839,7 +840,7 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
                               {item.quantity}
                             </span>
                           )}
-                          {item.category && <span>• {item.category}</span>}
+                          {item.category && <span>• {getCategoryLabel(item.category, t)}</span>}
                           {item.checkedBy && <span>• {t("lists.addedBy", { name: item.checkedBy })}</span>}
                         </div>
                       </div>
@@ -924,7 +925,7 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
                           )}
                         </div>
                         <span className="text-[10px] text-slate-400 dark:text-slate-500">
-                          {item.checkedBy ? `${t("lists.completed")} por ${item.checkedBy}` : t("lists.completed")}
+                          {item.checkedBy ? t("lists.completedBy", { status: t("lists.completed"), name: item.checkedBy }) : t("lists.completed")}
                         </span>
                       </div>
                     </div>

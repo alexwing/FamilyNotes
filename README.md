@@ -5,8 +5,8 @@
 <h1 align="center">FamilyNotes</h1>
 
 <p align="center">
-  <strong>Aplicación familiar cifrada de extremo a extremo para listas de compras inteligentes y notas seguras.</strong><br>
-  <em>Mobile-first, end-to-end encrypted family shopping lists and secure shared notes, built with Tauri v2 (Rust + React).</em>
+  <strong>End-to-end encrypted family shopping lists and secure shared notes.</strong><br>
+  <em>Mobile-first, zero-knowledge architecture built with Tauri v2 (Rust + React).</em>
 </p>
 
 <p align="center">
@@ -21,95 +21,95 @@
 
 ---
 
-## 📱 ¿Qué es FamilyNotes? / What is FamilyNotes?
+## 📱 What is FamilyNotes?
 
-**FamilyNotes** es una aplicación multiplataforma (Android, Windows, Linux, macOS, iOS) diseñada para que familias y hogares compartan listas de compra y notas importantes de forma ágil, intuitiva y con **privacidad absoluta**. Todos los datos se cifran localmente en tu terminal mediante criptografía moderna de grado militar antes de ser almacenados o sincronizados.
-
----
-
-## 🚀 Características Principales / Key Features
-
-### 🛒 Listas de la Compra Inteligentes
-- **Múltiples Listas y Comercios**: Organiza tus compras por tienda o categoría (Mercadona, Lidl, Aldi, Farmacia, etc.) con iconos y colores personalizados.
-- **Pestaña "Todas" (Vista Consolidada)**: Pestaña fija en primera posición que suma todos los artículos pendientes de todas las listas activas, mostrando el distintivo de la tienda a la que pertenece cada producto y un selector rápido de destino.
-- **Reordenación Táctil y con Ratón**: Mantén pulsada una pestaña en el móvil (con respuesta háptica) o arrástrala con el ratón en escritorio para reordenar las tiendas a tu gusto.
-- **Recordatorios Inteligentes de Reposición**: Sugerencias automáticas estilo carrusel para artículos frecuentes según tu patrón de compra.
-- **Diccionario de Productos**: Autocompletado rápido con iconos emoji y categorías, con gestión de diccionario personalizado.
-- **Sistema de Archivado**: Oculta listas completadas o temporales en una sección dedicada de archivadas en modo lectura, con opción de desarchivar o borrar definitivamente.
-
-### 📝 Notas Familiares Seguras
-- Crea notas compartidas para recetas, información del hogar, tareas o contraseñas.
-- Fijación de notas importantes al principio (`Pin`).
-- Archivado seguro de notas antiguas.
-
-### 🔒 Seguridad y Cero Conocimiento (Zero-Knowledge)
-- **Cifrado Local Auténtico**: Derivación de clave mediante **Argon2id** y cifrado autenticado de datos con **XChaCha20-Poly1305**.
-- **Sin Dependencia de Terceros**: La contraseña maestra nunca viaja por la red ni se envía a servidores ajenos; todo el descifrado ocurre en la memoria local del dispositivo.
-- **Arranque Protegido**: Pantalla de carga suave con auto-desbloqueo seguro si la contraseña está memorizada en el perfil local, o solicitud limpia de contraseña en caso contrario.
-
-### 📡 Sincronización en la Nube mediante FTP
-- **Sincronización Inteligente en Segundo Plano**: Sincroniza automáticamente tras unos segundos de inactividad, al perder el foco de la ventana o al volver a abrir la aplicación.
-- **Fusión Bidireccional Sin Conflictos**: Merge inteligente que preserva cambios realizados simultáneamente en distintos terminales (listas, notas, historial y catálogo).
-- **Gestión de Dispositivos Familiares**: Visualiza todos los terminales autorizados. Si revocas un dispositivo, su acceso queda bloqueado y se requerirá la contraseña maestra para re-autorizarlo.
-- **Vinculación Sencilla con Código QR**: Escanea el QR generado en un terminal para conectar instantáneamente nuevos móviles o tabletas a la bóveda familiar.
-
-### 🌐 Interfaz y Ajustes
-- **Multiidioma (i18n)**: Español e Inglés con detección automática del idioma del sistema o selección manual.
-- **Modo Oscuro y Claro**: Soporte para tema claro, oscuro o sincronizado con el sistema operativo.
-- **Diseño Adaptativo Móvil**: Pestañas con modo compacto solo con iconos en pantallas estrechas.
-- **Memoria de Ventana en Escritorio**: Recuerda el tamaño, posición y estado de pantalla completa entre sesiones.
+**FamilyNotes** is a cross-platform application (Android, Windows, Linux, macOS, iOS) built for families and households to manage shopping lists and notes with speed, ease, and **complete privacy**. Every piece of information is encrypted locally on your device with military-grade cryptography before being stored or synchronized.
 
 ---
 
-## 🛠 Stack Tecnológico
+## 🚀 Key Features
 
-| Capa | Tecnologías |
+### 🛒 Smart Shopping Lists
+- **Multi-Store Management**: Organize shopping lists by store or merchant (e.g. Supermarket, Pharmacy, Bakery, Hardware) with custom emoji icons and colors.
+- **Consolidated "All" Tab**: A fixed first tab that sums all pending items across every active list, displaying store badges for each product and a quick destination selector when adding new items.
+- **Touch & Mouse Tab Reordering**: Long-press tabs on mobile devices (with haptic vibration feedback) or drag-and-drop on desktop to rearrange store lists to your liking.
+- **Smart Replenishment Reminders**: Intelligent carousel suggestions for frequently purchased products based on consumption habits.
+- **Product Dictionary & Categories**: Fast autocomplete with emojis and localized categories, backed by a built-in catalog and a custom family dictionary editor.
+- **Archiving System**: Archive seasonal or completed lists into a dedicated read-only section, with the ability to unarchive or permanently delete them.
+
+### 📝 Secure Family Notes
+- Create shared notes for recipes, household procedures, checklists, or private credentials.
+- Pin essential notes to the top (`Pin`).
+- Safe archiving and instant search.
+
+### 🔒 Zero-Knowledge Security
+- **Authentic Local Cryptography**: Password key derivation using **Argon2id** and authenticated encryption with **XChaCha20-Poly1305**.
+- **No Third-Party Reliance**: Master passwords never leave your hardware; all decryption happens strictly inside device memory.
+- **Protected Startup**: Clean splash loader with smooth automatic unlocking when credentials are saved locally, preventing password prompt flickering.
+
+### 📡 Private FTP Cloud Sync
+- **Intelligent Background Sync**: Automatically synchronizes after a few seconds of inactivity, upon losing window focus, or when relaunching the app.
+- **Conflict-Free Bidirectional Merge**: Smart merge algorithm preserving changes made concurrently across different family devices (lists, notes, history, and catalog).
+- **Family Device Management**: Inspect all registered devices. Revoke any lost or unused device remotely, locking it out until the master password is re-entered.
+- **Instant QR Code Pairing**: Scan a secure QR code generated on an existing device to connect new phones or tablets in seconds.
+
+### 🌐 Modern UI & Customization
+- **Internationalization (i18n)**: Fully translated into English and Spanish with automatic system locale detection and manual switching.
+- **Light & Dark Modes**: Complete theme support across the entire interface and modal dialogs.
+- **Mobile-Adaptive Layout**: Responsive tab navigation (compact icon-only view on small screens) for maximum convenience.
+- **Desktop Window Memory**: Remembers window dimensions, position, and fullscreen state between sessions.
+
+---
+
+## 🛠 Tech Stack
+
+| Layer | Technologies |
 | :--- | :--- |
 | **Backend / Core** | [Rust](https://www.rust-lang.org/), [Tauri v2](https://v2.tauri.app/) |
-| **Criptografía** | `argon2`, `chacha20poly1305`, `zeroize` |
+| **Cryptography** | `argon2`, `chacha20poly1305`, `zeroize` |
 | **Frontend** | [React 18](https://react.dev/), [TypeScript](https://www.typescriptlang.org/), [Vite](https://vitejs.dev/) |
-| **Estilos y UI** | [Tailwind CSS](https://tailwindcss.com/), [Lucide Icons](https://lucide.dev/) |
-| **Sincronización** | FTP nativo con reintentos y soporte UTF-8 |
+| **Styling & UI** | [Tailwind CSS](https://tailwindcss.com/), [Lucide Icons](https://lucide.dev/) |
+| **Synchronization** | Native FTP client with retry logic and UTF-8 support |
 
 ---
 
-## 📦 Instalación y Compilación
+## 📦 Getting Started
 
-### Requisitos Previos
-1. [Node.js](https://nodejs.org/) (versión 18 o superior) y `npm`.
-2. [Rust](https://rustup.rs/) (herramientas `cargo` actualizadas).
-3. Para Android: Android Studio, Android SDK (API 34+) y Android NDK (r26d+).
+### Prerequisites
+1. [Node.js](https://nodejs.org/) (v18 or higher) and `npm`.
+2. [Rust](https://rustup.rs/) (up-to-date `cargo` toolchain).
+3. For Android builds: Android Studio, Android SDK (API 34+), and Android NDK (r26d+).
 
-### Clonar e Instalar Dependencias
+### Clone & Install
 ```bash
-# Clonar el repositorio
+# Clone repository
 git clone https://github.com/alexwing/FamilyNotes.git
 cd FamilyNotes
 
-# Instalar dependencias del frontend
+# Install frontend dependencies
 npm install
 ```
 
-### Ejecutar en Modo Desarrollo (Escritorio)
+### Run in Development Mode (Desktop)
 ```bash
 npm run tauri dev
 ```
 
-### Compilar para Escritorio (Release)
+### Build for Desktop (Release)
 ```bash
 npm run tauri build
 ```
 
-### Compilar APK para Android
+### Build Android APK
 ```bash
 npm run tauri android build -- --apk --target aarch64
 ```
-El archivo `.apk` universal resultante se generará en:
+The resulting universal release APK will be located at:
 `src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release.apk`
 
 ---
 
-## 🔒 Arquitectura de Seguridad
+## 🔒 Security Architecture
 
 ```
 +-------------------------------------------------------------+
@@ -132,13 +132,14 @@ El archivo `.apk` universal resultante se generará en:
                      Local Storage & FTP Sync
 ```
 
-1. **Derivación de Claves**: El password maestro se procesa mediante **Argon2id** (función resistente a ataques por GPU/ASIC) junto a un salt único de 16 bytes almacenado en la cabecera del vault.
-2. **Cifrado de Datos**: La carga útil en formato JSON se cifra mediante **XChaCha20-Poly1305** con nonces de 24 bytes para garantizar confidencialidad e integridad criptográfica estricta.
-3. **Persistencia y Nube**: Incluso si el servidor FTP es vulnerado o interceptado, ningún atacante puede leer los contenidos ni reconstruir las listas sin la contraseña maestra.
+1. **Key Derivation**: The master password is processed through **Argon2id** (GPU/ASIC-resistant KDF) with a unique 16-byte salt stored in the vault header.
+2. **Data Encryption**: The JSON payload is encrypted using **XChaCha20-Poly1305** authenticated cipher with a 24-byte nonce to guarantee absolute confidentiality and cryptographic integrity.
+3. **Zero-Knowledge Cloud**: Even if the FTP server is intercepted or compromised, attackers cannot read vault contents without the master password.
 
 ---
 
-## 📄 Licencia
+## 📄 License
 
-Este proyecto está bajo la licencia **GPL-3.0**. Consulta el archivo `LICENSE` para más detalles.
+This project is open source and licensed under the **GPL-3.0** License. See `LICENSE` for details.
+
 
