@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::sync::Mutex;
 use tauri::State;
 use uuid::Uuid;
@@ -6,8 +7,8 @@ use zeroize::Zeroizing;
 use crate::{
     crypto::{default_cipher_info, default_kdf_params, derive_key, now_iso, open_payload, seal_payload, VAULT_MAGIC},
     models::{
-        FamilyMember, Note, PurchaseHistoryItem, ShoppingItem, ShoppingList, SyncConfig, VaultData,
-        VaultEnvelope, VaultHeader, VaultSnapshot, VaultStatus,
+        FamilyMember, Note, ProductCatalogItem, PurchaseHistoryItem, ShoppingItem, ShoppingList,
+        SyncConfig, VaultData, VaultEnvelope, VaultHeader, VaultSnapshot, VaultStatus,
     },
     sync,
 };
@@ -239,6 +240,7 @@ fn seed_sample_data(device_name: &str, device_id: &str) -> VaultData {
                 color: "#10b981".to_string(),
             },
         ],
+        deleted_member_ids: Vec::new(),
     }
 }
 
@@ -642,6 +644,78 @@ pub fn test_sync(config: SyncConfig) -> Result<(), String> {
     sync::test_connection(&config)
 }
 
+fn merge_shopping_lists(
+    primary: &[ShoppingList],
+    secondary: &[ShoppingList],
+) -> Vec<ShoppingList> {
+    let mut result = primary.to_vec();
+
+    for sec_list in secondary {
+        if let Some(pri_list) = result.iter_mut().find(|l| l.id == sec_list.id) {
+            for sec_item in &sec_list.items {
+                if let Some(pri_item) = pri_list.items.iter_mut().find(|i| i.id == sec_item.id) {
+                    if sec_item.updated_at > pri_item.updated_at {
+                        *pri_item = sec_item.clone();
+                    }
+                } else {
+                    pri_list.items.push(sec_item.clone());
+                }
+            }
+        } else {
+            result.push(sec_list.clone());
+        }
+    }
+
+    result
+}
+
+fn merge_notes(primary: &[Note], secondary: &[Note]) -> Vec<Note> {
+    let mut result = primary.to_vec();
+    for sec_note in secondary {
+        if let Some(pri_note) = result.iter_mut().find(|n| n.id == sec_note.id) {
+            if sec_note.updated_at > pri_note.updated_at {
+                *pri_note = sec_note.clone();
+            }
+        } else {
+            result.push(sec_note.clone());
+        }
+    }
+    result
+}
+
+fn merge_purchase_history(
+    primary: &[PurchaseHistoryItem],
+    secondary: &[PurchaseHistoryItem],
+) -> Vec<PurchaseHistoryItem> {
+    let mut result = primary.to_vec();
+    for sec_item in secondary {
+        let sec_key = sec_item.text.trim().to_lowercase();
+        if let Some(pri_item) = result.iter_mut().find(|i| i.text.trim().to_lowercase() == sec_key) {
+            pri_item.count = std::cmp::max(pri_item.count, sec_item.count);
+            if sec_item.last_purchased_at > pri_item.last_purchased_at {
+                pri_item.last_purchased_at = sec_item.last_purchased_at.clone();
+            }
+        } else {
+            result.push(sec_item.clone());
+        }
+    }
+    result
+}
+
+fn merge_catalog(
+    primary: &[ProductCatalogItem],
+    secondary: &[ProductCatalogItem],
+) -> Vec<ProductCatalogItem> {
+    let mut result = primary.to_vec();
+    for sec_item in secondary {
+        let sec_name = sec_item.name.trim().to_lowercase();
+        if !result.iter().any(|i| i.id == sec_item.id || i.name.trim().to_lowercase() == sec_name) {
+            result.push(sec_item.clone());
+        }
+    }
+    result
+}
+
 #[tauri::command]
 pub fn sync_now(state: State<'_, VaultState>) -> Result<VaultSnapshot, String> {
     let mut mgr = state.lock().map_err(|_| "mutex_lock_failed")?;
@@ -661,38 +735,104 @@ pub fn sync_now(state: State<'_, VaultState>) -> Result<VaultSnapshot, String> {
 
     if let Some(bytes) = remote_bytes {
         let remote_str = String::from_utf8(bytes).map_err(|_| "remote_not_utf8".to_string())?;
+
+        // If remote file is bit-for-bit identical to our local raw contents, no merge or upload needed
+        if mgr.raw_contents.as_deref() == Some(&remote_str) {
+            let status = mgr.status()?;
+            return Ok(VaultSnapshot {
+                status,
+                contents: remote_str,
+            });
+        }
+
         let remote_env: VaultEnvelope =
             serde_json::from_str(&remote_str).map_err(|_| "remote_invalid_format".to_string())?;
 
         let remote_data: VaultData =
             open_payload(&remote_env.payload, &remote_env.header, &key[..])?;
 
-        // Merge: keep highest revision, or merge items
         if let Some(local_data) = mgr.data.as_mut() {
-            if remote_data.revision > local_data.revision {
-                *local_data = remote_data;
-            } else if local_data.revision > remote_data.revision {
-                // local is newer, keep local
+            // Merge deleted_member_ids
+            let mut all_deleted: HashSet<String> = local_data
+                .deleted_member_ids
+                .iter()
+                .cloned()
+                .collect();
+            for d in &remote_data.deleted_member_ids {
+                all_deleted.insert(d.clone());
+            }
+
+            // Merge members: filter out deleted ones
+            let mut merged_members: Vec<FamilyMember> = Vec::new();
+            let mut seen_ids: HashSet<String> = HashSet::new();
+
+            let (primary_members, secondary_members) = if remote_data.revision >= local_data.revision {
+                (&remote_data.members, &local_data.members)
             } else {
-                // same revision, union shopping lists
-                for r_list in remote_data.shopping_lists {
-                    if let Some(l_list) = local_data.shopping_lists.iter_mut().find(|l| l.id == r_list.id) {
-                        for r_item in r_list.items {
-                            if !l_list.items.iter().any(|i| i.id == r_item.id) {
-                                l_list.items.push(r_item);
-                            }
-                        }
-                    } else {
-                        local_data.shopping_lists.push(r_list);
+                (&local_data.members, &remote_data.members)
+            };
+
+            for m in primary_members.iter().chain(secondary_members.iter()) {
+                if all_deleted.contains(&m.id) || all_deleted.contains(&m.device_id) {
+                    continue;
+                }
+                let norm_name = m.name.trim().to_lowercase();
+                if !seen_ids.contains(&m.id)
+                    && (m.device_id.is_empty() || !seen_ids.contains(&m.device_id))
+                    && !seen_ids.contains(&norm_name)
+                {
+                    seen_ids.insert(m.id.clone());
+                    if !m.device_id.is_empty() {
+                        seen_ids.insert(m.device_id.clone());
                     }
+                    seen_ids.insert(norm_name);
+                    merged_members.push(m.clone());
                 }
             }
+
+            // Merge lists, notes, history, catalog
+            let (pri_lists, sec_lists) = if remote_data.revision >= local_data.revision {
+                (&remote_data.shopping_lists, &local_data.shopping_lists)
+            } else {
+                (&local_data.shopping_lists, &remote_data.shopping_lists)
+            };
+            let merged_lists = merge_shopping_lists(pri_lists, sec_lists);
+
+            let (pri_notes, sec_notes) = if remote_data.revision >= local_data.revision {
+                (&remote_data.notes, &local_data.notes)
+            } else {
+                (&local_data.notes, &remote_data.notes)
+            };
+            let merged_notes = merge_notes(pri_notes, sec_notes);
+
+            let (pri_hist, sec_hist) = if remote_data.revision >= local_data.revision {
+                (&remote_data.purchase_history, &local_data.purchase_history)
+            } else {
+                (&local_data.purchase_history, &remote_data.purchase_history)
+            };
+            let merged_hist = merge_purchase_history(pri_hist, sec_hist);
+
+            let (pri_cat, sec_cat) = if remote_data.revision >= local_data.revision {
+                (&remote_data.catalog, &local_data.catalog)
+            } else {
+                (&local_data.catalog, &remote_data.catalog)
+            };
+            let merged_cat = merge_catalog(pri_cat, sec_cat);
+
+            local_data.revision = std::cmp::max(local_data.revision, remote_data.revision) + 1;
+            local_data.members = merged_members;
+            local_data.deleted_member_ids = all_deleted.into_iter().collect();
+            local_data.shopping_lists = merged_lists;
+            local_data.notes = merged_notes;
+            local_data.purchase_history = merged_hist;
+            local_data.catalog = merged_cat;
         }
     }
 
     // 2. Seal merged data and upload
     let snapshot = mgr.seal_current()?;
     sync::upload(&cfg, snapshot.contents.as_bytes())?;
+    mgr.raw_contents = Some(snapshot.contents.clone());
 
     Ok(snapshot)
 }
@@ -702,6 +842,7 @@ pub fn link_via_ftp(
     config: SyncConfig,
     master_password: String,
     device_name: Option<String>,
+    device_id: Option<String>,
     state: State<'_, VaultState>,
 ) -> Result<VaultSnapshot, String> {
     if master_password.trim().is_empty() {
@@ -726,17 +867,27 @@ pub fn link_via_ftp(
 
     // 3. Register member / device if provided
     let dev_name = device_name.unwrap_or_else(|| "Nuevo Dispositivo".to_string());
-    if !data.members.iter().any(|m| m.name == dev_name) {
+    let dev_id = device_id.unwrap_or_else(|| Uuid::new_v4().to_string());
+
+    // Remove from deleted_member_ids if present because it is explicitly re-authorized with master password
+    data.deleted_member_ids.retain(|d| d != &dev_id && !d.eq_ignore_ascii_case(&dev_name));
+
+    if let Some(existing) = data.members.iter_mut().find(|m| m.device_id == dev_id || m.name.eq_ignore_ascii_case(&dev_name)) {
+        existing.name = dev_name.clone();
+        existing.device_id = dev_id.clone();
+    } else {
         data.members.push(FamilyMember {
             id: Uuid::new_v4().to_string(),
             name: dev_name.clone(),
-            device_id: Uuid::new_v4().to_string(),
+            device_id: dev_id.clone(),
             color: "#38bdf8".to_string(),
         });
     }
 
     data.device_name = dev_name;
-    data.sync = config;
+    data.device_id = dev_id;
+    data.sync = config.clone();
+    data.revision += 1;
 
     let mut mgr = state.lock().map_err(|_| "mutex_lock_failed")?;
     mgr.key = Some(key);
@@ -745,7 +896,12 @@ pub fn link_via_ftp(
     mgr.raw_contents = Some(remote_str);
     mgr.master_password = Some(master_password);
 
-    mgr.seal_current()
+    let snapshot = mgr.seal_current()?;
+
+    // Immediately upload to FTP so the newly linked device is registered on the server for other family devices!
+    let _ = sync::upload(&config, snapshot.contents.as_bytes());
+
+    Ok(snapshot)
 }
 
 #[tauri::command]
@@ -849,7 +1005,20 @@ pub fn delete_family_member(
     let mut mgr = state.lock().map_err(|_| "mutex_lock_failed")?;
     let data = mgr.data.as_mut().ok_or_else(|| "vault_locked".to_string())?;
 
-    data.members.retain(|m| m.id != id);
+    if let Some(pos) = data.members.iter().position(|m| m.id == id || m.device_id == id) {
+        let member = data.members.remove(pos);
+        if !data.deleted_member_ids.contains(&member.id) {
+            data.deleted_member_ids.push(member.id);
+        }
+        if !member.device_id.is_empty() && !data.deleted_member_ids.contains(&member.device_id) {
+            data.deleted_member_ids.push(member.device_id);
+        }
+    } else {
+        if !data.deleted_member_ids.contains(&id) {
+            data.deleted_member_ids.push(id);
+        }
+    }
+
     data.revision += 1;
     mgr.seal_current()
 }
@@ -862,6 +1031,9 @@ pub fn register_family_member(
 ) -> Result<VaultSnapshot, String> {
     let mut mgr = state.lock().map_err(|_| "mutex_lock_failed")?;
     let data = mgr.data.as_mut().ok_or_else(|| "vault_locked".to_string())?;
+
+    // Un-revoke if previously marked as deleted
+    data.deleted_member_ids.retain(|d| d != &device_id && !d.eq_ignore_ascii_case(&name));
 
     if let Some(existing) = data.members.iter_mut().find(|m| m.device_id == device_id || m.name.eq_ignore_ascii_case(&name)) {
         existing.name = name;

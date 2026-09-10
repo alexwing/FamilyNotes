@@ -268,6 +268,16 @@ export function App() {
         const defaultDir = await Api.getDefaultVaultsDir();
 
         let currentVaults: VaultProfile[] = prefs.vaults || [];
+        let prefsNeedSave = false;
+
+        // Ensure unique persistent deviceId for this device
+        if (!prefs.currentDeviceId || prefs.currentDeviceId === "dev-local") {
+          prefs.currentDeviceId =
+            typeof crypto !== "undefined" && crypto.randomUUID
+              ? crypto.randomUUID()
+              : `dev_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+          prefsNeedSave = true;
+        }
 
         // Check if there is an existing vault file on disk or in preferences to migrate
         if (currentVaults.length === 0) {
@@ -286,8 +296,12 @@ export function App() {
             currentVaults = [initialVault];
             prefs.vaults = currentVaults;
             prefs.activeVaultId = initialVault.id;
-            await Api.savePreferences(prefs);
+            prefsNeedSave = true;
           }
+        }
+
+        if (prefsNeedSave) {
+          await Api.savePreferences(prefs);
         }
 
         setPreferences(prefs);
@@ -422,7 +436,14 @@ export function App() {
       const filePath =
         vaultPathRef.current || `${defaultDir}/${config.remoteFile || DEFAULT_VAULT_FILENAME}`;
 
-      const snap = await Api.linkViaFtp(config, password, deviceName);
+      const devId =
+        preferences.currentDeviceId && preferences.currentDeviceId !== "dev-local"
+          ? preferences.currentDeviceId
+          : typeof crypto !== "undefined" && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `dev_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+      const snap = await Api.linkViaFtp(config, password, deviceName, devId);
       await Api.writeVaultFile(filePath, snap.contents);
 
       const newVault: VaultProfile = {
@@ -441,6 +462,7 @@ export function App() {
       const updatedPrefs: Preferences = {
         ...preferences,
         currentDeviceName: deviceName,
+        currentDeviceId: devId,
         savedMasterPassword: password,
         vaultFilePath: filePath,
         activeVaultId: newVault.id,
@@ -453,6 +475,7 @@ export function App() {
       setIsOnboardingOpen(false);
       setIsUnlocked(true);
       await refreshVaultData();
+      void performSync(true);
       showToast("¡Bóveda vinculada y descargada desde el FTP!", "🎉");
     } catch (e) {
       console.error("Link via FTP error:", e);

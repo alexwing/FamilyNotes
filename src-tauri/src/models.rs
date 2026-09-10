@@ -138,6 +138,8 @@ pub struct VaultData {
     pub sync: SyncConfig,
     #[serde(default)]
     pub members: Vec<FamilyMember>,
+    #[serde(default)]
+    pub deleted_member_ids: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

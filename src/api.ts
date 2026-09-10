@@ -62,8 +62,8 @@ const Api = {
 
   syncNow: () => invoke<VaultSnapshot>("sync_now"),
 
-  linkViaFtp: (config: SyncConfig, masterPassword: string, deviceName?: string) =>
-    invoke<VaultSnapshot>("link_via_ftp", { config, masterPassword, deviceName }),
+  linkViaFtp: (config: SyncConfig, masterPassword: string, deviceName?: string, deviceId?: string) =>
+    invoke<VaultSnapshot>("link_via_ftp", { config, masterPassword, deviceName, deviceId }),
 
   // Native File Persistence (No plugin-fs sandbox restrictions!)
   writeVaultFile: (path: string, contents: string) =>

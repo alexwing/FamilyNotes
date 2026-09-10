@@ -93,11 +93,14 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isDraggingRef = useRef(false);
   const dragSourceIdRef = useRef<string | null>(null);
+  const currentOrderRef = useRef<string[]>([]);
 
   // Sync internal ordered IDs when lists change (if not actively dragging)
   React.useEffect(() => {
     if (!isDraggingRef.current) {
-      setOrderedActiveListIds(lists.filter((l) => !l.archived).map((l) => l.id));
+      const ids = lists.filter((l) => !l.archived).map((l) => l.id);
+      currentOrderRef.current = ids;
+      setOrderedActiveListIds(ids);
     }
   }, [lists]);
 
@@ -123,88 +126,87 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
 
   const handleTabPointerDown = (listId: string, e: React.PointerEvent) => {
     if (e.button !== 0 && e.pointerType === "mouse") return;
+
+    const startX = e.clientX;
+    const startY = e.clientY;
     dragSourceIdRef.current = listId;
     isDraggingRef.current = false;
 
     if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
 
-    longPressTimerRef.current = setTimeout(() => {
-      setIsLongPressing(true);
-      setDraggedListId(listId);
+    const startDrag = () => {
       isDraggingRef.current = true;
+      setDraggedListId(listId);
+      setIsLongPressing(true);
       if (typeof navigator !== "undefined" && navigator.vibrate) {
         navigator.vibrate(40);
       }
-    }, 350);
-  };
+    };
 
-  const handleTabPointerMove = (e: React.PointerEvent) => {
-    if (!isDraggingRef.current || !dragSourceIdRef.current) return;
+    // Long press timer (for touch devices or stationary click)
+    longPressTimerRef.current = setTimeout(() => {
+      startDrag();
+    }, 280);
 
-    const elem = document.elementFromPoint(e.clientX, e.clientY);
-    const tabElem = elem?.closest("[data-list-id]") as HTMLElement | null;
-    const targetId = tabElem?.dataset.listId;
+    const onGlobalPointerMove = (moveEv: PointerEvent) => {
+      const dx = moveEv.clientX - startX;
+      const dy = moveEv.clientY - startY;
+      const dist = Math.hypot(dx, dy);
 
-    if (targetId && targetId !== dragSourceIdRef.current) {
-      setOrderedActiveListIds((prev) => {
-        const currentIds = prev ? [...prev] : activeLists.map((l) => l.id);
-        const fromIdx = currentIds.indexOf(dragSourceIdRef.current!);
-        const toIdx = currentIds.indexOf(targetId);
-        if (fromIdx === -1 || toIdx === -1) return prev;
-        const [removed] = currentIds.splice(fromIdx, 1);
-        currentIds.splice(toIdx, 0, removed);
-        return currentIds;
-      });
-    }
-  };
+      // On desktop mouse, moving > 5px immediately starts drag
+      if (!isDraggingRef.current && moveEv.pointerType === "mouse" && dist > 5) {
+        if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+        startDrag();
+      }
 
-  const handleTabPointerUpOrCancel = () => {
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
+      // If we are actively dragging, track tab reordering
+      if (isDraggingRef.current && dragSourceIdRef.current) {
+        const elem = document.elementFromPoint(moveEv.clientX, moveEv.clientY);
+        const tabElem = elem?.closest("[data-list-id]") as HTMLElement | null;
+        const targetId = tabElem?.dataset.listId;
 
-    if (isDraggingRef.current && onReorderLists && orderedActiveListIds) {
-      onReorderLists(orderedActiveListIds);
-    }
+        if (targetId && targetId !== dragSourceIdRef.current) {
+          const currentIds = [...currentOrderRef.current];
+          const fromIdx = currentIds.indexOf(dragSourceIdRef.current);
+          const toIdx = currentIds.indexOf(targetId);
+          if (fromIdx !== -1 && toIdx !== -1) {
+            const [removed] = currentIds.splice(fromIdx, 1);
+            currentIds.splice(toIdx, 0, removed);
+            currentOrderRef.current = currentIds;
+            setOrderedActiveListIds(currentIds);
+          }
+        }
+      }
+    };
 
-    setTimeout(() => {
-      setIsLongPressing(false);
-      setDraggedListId(null);
-      isDraggingRef.current = false;
-      dragSourceIdRef.current = null;
-    }, 60);
-  };
+    const onGlobalPointerUp = () => {
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+      }
 
-  const handleDragStart = (listId: string, e: React.DragEvent) => {
-    dragSourceIdRef.current = listId;
-    setDraggedListId(listId);
-    e.dataTransfer.setData("text/plain", listId);
-    e.dataTransfer.effectAllowed = "move";
-  };
+      window.removeEventListener("pointermove", onGlobalPointerMove);
+      window.removeEventListener("pointerup", onGlobalPointerUp);
+      window.removeEventListener("pointercancel", onGlobalPointerUp);
 
-  const handleDragOver = (listId: string, e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-    if (dragSourceIdRef.current && dragSourceIdRef.current !== listId) {
-      setOrderedActiveListIds((prev) => {
-        const currentIds = prev ? [...prev] : activeLists.map((l) => l.id);
-        const fromIdx = currentIds.indexOf(dragSourceIdRef.current!);
-        const toIdx = currentIds.indexOf(listId);
-        if (fromIdx === -1 || toIdx === -1) return prev;
-        const [removed] = currentIds.splice(fromIdx, 1);
-        currentIds.splice(toIdx, 0, removed);
-        return currentIds;
-      });
-    }
-  };
+      if (isDraggingRef.current) {
+        if (onReorderLists && currentOrderRef.current.length > 0) {
+          onReorderLists([...currentOrderRef.current]);
+        }
+      }
 
-  const handleDragEnd = () => {
-    if (onReorderLists && orderedActiveListIds) {
-      onReorderLists(orderedActiveListIds);
-    }
-    setDraggedListId(null);
-    dragSourceIdRef.current = null;
+      // Small tick before clearing dragging state so onClick handler can ignore click
+      setTimeout(() => {
+        isDraggingRef.current = false;
+        dragSourceIdRef.current = null;
+        setDraggedListId(null);
+        setIsLongPressing(false);
+      }, 60);
+    };
+
+    window.addEventListener("pointermove", onGlobalPointerMove);
+    window.addEventListener("pointerup", onGlobalPointerUp);
+    window.addEventListener("pointercancel", onGlobalPointerUp);
   };
 
   const currentList =
@@ -263,17 +265,10 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
             <div
               key={list.id}
               data-list-id={list.id}
-              draggable={true}
               onPointerDown={(e) => handleTabPointerDown(list.id, e)}
-              onPointerMove={handleTabPointerMove}
-              onPointerUp={handleTabPointerUpOrCancel}
-              onPointerCancel={handleTabPointerUpOrCancel}
-              onDragStart={(e) => handleDragStart(list.id, e)}
-              onDragOver={(e) => handleDragOver(list.id, e)}
-              onDragEnd={handleDragEnd}
-              className={`flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition-all border select-none cursor-grab active:cursor-grabbing ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition-all border select-none cursor-grab active:cursor-grabbing touch-none ${
                 isBeingDragged
-                  ? "bg-purple-100 dark:bg-purple-950/60 text-purple-900 dark:text-purple-200 border-purple-500 scale-105 shadow-xl ring-2 ring-purple-500/50 z-20"
+                  ? "bg-purple-100 dark:bg-purple-950/60 text-purple-900 dark:text-purple-200 border-purple-500 scale-105 shadow-xl ring-2 ring-purple-500/50 z-20 pointer-events-none"
                   : isSelected
                   ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-white border-emerald-500 shadow-md ring-1 ring-emerald-500/30"
                   : "bg-white/80 dark:bg-slate-900/80 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:text-slate-900 dark:hover:text-slate-200 hover:border-slate-300 dark:hover:border-slate-700"
