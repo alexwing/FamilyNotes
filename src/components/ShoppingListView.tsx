@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   Plus,
   Trash2,
@@ -26,6 +26,7 @@ interface ShoppingListViewProps {
   onDeleteList: (id: string) => void;
   onArchiveList?: (id: string) => void;
   onUnarchiveList?: (id: string) => void;
+  onReorderLists?: (listIds: string[]) => void;
   onAddItem: (listId: string, text: string, emoji?: string, category?: string, addToDictionary?: boolean) => void;
   onToggleItem: (listId: string, itemId: string) => void;
   onDeleteItem: (listId: string, itemId: string) => void;
@@ -45,6 +46,7 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
   onDeleteList,
   onArchiveList,
   onUnarchiveList,
+  onReorderLists,
   onAddItem,
   onToggleItem,
   onDeleteItem,
@@ -85,9 +87,125 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
   };
 
   const [showArchived, setShowArchived] = useState(false);
+  const [orderedActiveListIds, setOrderedActiveListIds] = useState<string[] | null>(null);
+  const [draggedListId, setDraggedListId] = useState<string | null>(null);
+  const [isLongPressing, setIsLongPressing] = useState(false);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isDraggingRef = useRef(false);
+  const dragSourceIdRef = useRef<string | null>(null);
 
-  const activeLists = lists.filter((l) => !l.archived);
+  // Sync internal ordered IDs when lists change (if not actively dragging)
+  React.useEffect(() => {
+    if (!isDraggingRef.current) {
+      setOrderedActiveListIds(lists.filter((l) => !l.archived).map((l) => l.id));
+    }
+  }, [lists]);
+
+  const activeLists = React.useMemo(() => {
+    const base = lists.filter((l) => !l.archived);
+    if (!orderedActiveListIds) return base;
+    const map = new Map(base.map((l) => [l.id, l]));
+    const res: ShoppingList[] = [];
+    for (const id of orderedActiveListIds) {
+      const item = map.get(id);
+      if (item) {
+        res.push(item);
+        map.delete(id);
+      }
+    }
+    for (const item of map.values()) {
+      res.push(item);
+    }
+    return res;
+  }, [lists, orderedActiveListIds]);
+
   const archivedLists = lists.filter((l) => !!l.archived);
+
+  const handleTabPointerDown = (listId: string, e: React.PointerEvent) => {
+    if (e.button !== 0 && e.pointerType === "mouse") return;
+    dragSourceIdRef.current = listId;
+    isDraggingRef.current = false;
+
+    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+
+    longPressTimerRef.current = setTimeout(() => {
+      setIsLongPressing(true);
+      setDraggedListId(listId);
+      isDraggingRef.current = true;
+      if (typeof navigator !== "undefined" && navigator.vibrate) {
+        navigator.vibrate(40);
+      }
+    }, 350);
+  };
+
+  const handleTabPointerMove = (e: React.PointerEvent) => {
+    if (!isDraggingRef.current || !dragSourceIdRef.current) return;
+
+    const elem = document.elementFromPoint(e.clientX, e.clientY);
+    const tabElem = elem?.closest("[data-list-id]") as HTMLElement | null;
+    const targetId = tabElem?.dataset.listId;
+
+    if (targetId && targetId !== dragSourceIdRef.current) {
+      setOrderedActiveListIds((prev) => {
+        const currentIds = prev ? [...prev] : activeLists.map((l) => l.id);
+        const fromIdx = currentIds.indexOf(dragSourceIdRef.current!);
+        const toIdx = currentIds.indexOf(targetId);
+        if (fromIdx === -1 || toIdx === -1) return prev;
+        const [removed] = currentIds.splice(fromIdx, 1);
+        currentIds.splice(toIdx, 0, removed);
+        return currentIds;
+      });
+    }
+  };
+
+  const handleTabPointerUpOrCancel = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+
+    if (isDraggingRef.current && onReorderLists && orderedActiveListIds) {
+      onReorderLists(orderedActiveListIds);
+    }
+
+    setTimeout(() => {
+      setIsLongPressing(false);
+      setDraggedListId(null);
+      isDraggingRef.current = false;
+      dragSourceIdRef.current = null;
+    }, 60);
+  };
+
+  const handleDragStart = (listId: string, e: React.DragEvent) => {
+    dragSourceIdRef.current = listId;
+    setDraggedListId(listId);
+    e.dataTransfer.setData("text/plain", listId);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (listId: string, e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (dragSourceIdRef.current && dragSourceIdRef.current !== listId) {
+      setOrderedActiveListIds((prev) => {
+        const currentIds = prev ? [...prev] : activeLists.map((l) => l.id);
+        const fromIdx = currentIds.indexOf(dragSourceIdRef.current!);
+        const toIdx = currentIds.indexOf(listId);
+        if (fromIdx === -1 || toIdx === -1) return prev;
+        const [removed] = currentIds.splice(fromIdx, 1);
+        currentIds.splice(toIdx, 0, removed);
+        return currentIds;
+      });
+    }
+  };
+
+  const handleDragEnd = () => {
+    if (onReorderLists && orderedActiveListIds) {
+      onReorderLists(orderedActiveListIds);
+    }
+    setDraggedListId(null);
+    dragSourceIdRef.current = null;
+  };
 
   const currentList =
     lists.find((l) => l.id === selectedListId) || activeLists[0] || archivedLists[0] || lists[0];
@@ -139,18 +257,35 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
         {activeLists.map((list) => {
           const isSelected = list.id === currentList?.id;
           const pendCount = list.items.filter((i) => !i.checked).length;
+          const isBeingDragged = draggedListId === list.id;
+
           return (
             <div
               key={list.id}
-              className={`flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition-all border ${
-                isSelected
+              data-list-id={list.id}
+              draggable={true}
+              onPointerDown={(e) => handleTabPointerDown(list.id, e)}
+              onPointerMove={handleTabPointerMove}
+              onPointerUp={handleTabPointerUpOrCancel}
+              onPointerCancel={handleTabPointerUpOrCancel}
+              onDragStart={(e) => handleDragStart(list.id, e)}
+              onDragOver={(e) => handleDragOver(list.id, e)}
+              onDragEnd={handleDragEnd}
+              className={`flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition-all border select-none cursor-grab active:cursor-grabbing ${
+                isBeingDragged
+                  ? "bg-purple-100 dark:bg-purple-950/60 text-purple-900 dark:text-purple-200 border-purple-500 scale-105 shadow-xl ring-2 ring-purple-500/50 z-20"
+                  : isSelected
                   ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-white border-emerald-500 shadow-md ring-1 ring-emerald-500/30"
                   : "bg-white/80 dark:bg-slate-900/80 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:text-slate-900 dark:hover:text-slate-200 hover:border-slate-300 dark:hover:border-slate-700"
               }`}
             >
               <button
                 type="button"
-                onClick={() => onSelectList(list.id)}
+                onClick={() => {
+                  if (!isDraggingRef.current && !isLongPressing) {
+                    onSelectList(list.id);
+                  }
+                }}
                 className="flex items-center gap-1.5 sm:gap-2 cursor-pointer"
               >
                 <Store size={14} style={{ color: list.color }} />
@@ -528,7 +663,6 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
                 {pendingItems.length}
               </span>
             </h3>
-            {!isCurrentArchived && <span className="text-[11px] text-slate-500">{t("lists.touchToToggle")}</span>}
           </div>
 
           {pendingItems.length === 0 ? (

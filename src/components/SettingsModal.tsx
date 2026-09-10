@@ -16,6 +16,7 @@ import {
   Moon,
   Monitor,
   Globe,
+  Trash2,
 } from "lucide-react";
 import QRCode from "qrcode";
 import { SyncConfig, Preferences, VaultData, ThemeMode, LanguageSetting } from "../types";
@@ -33,6 +34,7 @@ interface SettingsModalProps {
   onSavePreferences: (prefs: Preferences) => void;
   vaultData: VaultData | null;
   onShowToast: (msg: string, icon?: string) => void;
+  onDeleteDevice?: (id: string, name: string) => Promise<void> | void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -44,6 +46,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onSavePreferences,
   vaultData,
   onShowToast,
+  onDeleteDevice,
 }) => {
   const { t, language, setLanguage } = useTranslation();
   const { mode, setMode } = useTheme();
@@ -698,7 +701,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     .map((m) => (
                       <div
                         key={m.id}
-                        className="p-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl flex items-center justify-between"
+                        className="p-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl flex items-center justify-between group"
                       >
                         <div className="flex items-center gap-2.5">
                           <span className="text-lg">📱</span>
@@ -709,6 +712,23 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             <span className="text-[10px] text-slate-500 dark:text-slate-400">FTP Sync</span>
                           </div>
                         </div>
+
+                        {onDeleteDevice && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const title = t("settings.family.deleteDeviceTitle", { name: m.name });
+                              const confirmText = t("settings.family.deleteDeviceConfirm");
+                              if (confirm(`${title}\n\n${confirmText}`)) {
+                                onDeleteDevice(m.id, m.name);
+                              }
+                            }}
+                            title={t("settings.family.deleteDeviceBtn")}
+                            className="p-1.5 text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 hover:bg-rose-500/10 rounded-xl transition cursor-pointer"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        )}
                       </div>
                     ))}
                 </div>

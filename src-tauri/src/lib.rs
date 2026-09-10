@@ -42,6 +42,10 @@ pub fn run() {
             vault::upsert_catalog_item,
             vault::delete_catalog_item,
             vault::clear_purchase_history,
+            vault::delete_purchase_history_item,
+            vault::delete_family_member,
+            vault::register_family_member,
+            vault::reorder_shopping_lists,
             preferences::get_preferences,
             preferences::save_preferences,
         ])

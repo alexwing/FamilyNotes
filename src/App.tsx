@@ -77,10 +77,50 @@ export function App() {
     }
   }, []);
 
+  const preferencesRef = useRef(preferences);
+  useEffect(() => {
+    preferencesRef.current = preferences;
+  }, [preferences]);
+
   // Load vault data into state
   const refreshVaultData = useCallback(async () => {
     try {
       const data = await Api.getVaultData();
+
+      // Check device revocation: if vault has members, verify current device is authorized
+      const currentDev = preferencesRef.current.currentDeviceName;
+      const currentDevId = preferencesRef.current.currentDeviceId;
+      if (data.members && data.members.length > 0) {
+        const isMember = data.members.some(
+          (m) =>
+            m.name.toLowerCase() === currentDev.toLowerCase() ||
+            (m.deviceId && m.deviceId === currentDevId)
+        );
+        if (!isMember) {
+          console.warn("Device was removed from members! Locking out...");
+          const currentPrefs = preferencesRef.current;
+          const updatedVaults = (currentPrefs.vaults || []).map((v) =>
+            v.id === currentPrefs.activeVaultId || v.filePath === vaultPathRef.current
+              ? { ...v, savedMasterPassword: null }
+              : v
+          );
+          const updatedPrefs: Preferences = {
+            ...currentPrefs,
+            savedMasterPassword: null,
+            vaults: updatedVaults,
+          };
+          await Api.savePreferences(updatedPrefs);
+          setPreferences(updatedPrefs);
+          await Api.lockVault();
+          setIsUnlocked(false);
+          setManualUnlockError(
+            t("settings.family.deviceRevokedMsg") ||
+              "Este dispositivo ha sido eliminado de la bóveda familiar. Introduce la contraseña maestra para volver a acceder."
+          );
+          return;
+        }
+      }
+
       setVaultData(data);
       if (data.shoppingLists.length > 0) {
         setSelectedListId((curr) => {
@@ -91,7 +131,7 @@ export function App() {
     } catch (e) {
       console.error("Failed to load vault data:", e);
     }
-  }, []);
+  }, [t]);
 
   const isSyncingRef = useRef(false);
   const hasPendingChangesRef = useRef(false);
@@ -278,6 +318,38 @@ export function App() {
             try {
               const contents = await Api.readVaultFile(active.filePath);
               await Api.unlockVault(contents, pass);
+              const data = await Api.getVaultData();
+
+              const devName = prefs.currentDeviceName || "Mi Dispositivo";
+              const devId = prefs.currentDeviceId;
+              if (data.members && data.members.length > 0) {
+                const isMember = data.members.some(
+                  (m) =>
+                    m.name.toLowerCase() === devName.toLowerCase() ||
+                    (m.deviceId && m.deviceId === devId)
+                );
+                if (!isMember) {
+                  console.warn("Device was removed from members on startup! Locking out...");
+                  const updatedVaults = currentVaults.map((v) =>
+                    v.id === active.id || v.filePath === active.filePath
+                      ? { ...v, savedMasterPassword: null }
+                      : v
+                  );
+                  await Api.savePreferences({
+                    ...prefs,
+                    savedMasterPassword: null,
+                    vaults: updatedVaults,
+                  });
+                  await Api.lockVault();
+                  setIsUnlocked(false);
+                  setManualUnlockError(
+                    t("settings.family.deviceRevokedMsg") ||
+                      "Este dispositivo ha sido eliminado de la bóveda familiar. Introduce la contraseña maestra para volver a acceder."
+                  );
+                  return;
+                }
+              }
+
               setIsUnlocked(true);
               await refreshVaultData();
               void performSync(true);
@@ -297,7 +369,7 @@ export function App() {
     };
 
     void initApp();
-  }, [refreshVaultData, showToast]);
+  }, [refreshVaultData, showToast, t]);
 
   // Handle Onboarding Completion (First Vault Creation)
   const handleOnboardingComplete = async (password: string, deviceName: string) => {
@@ -395,6 +467,17 @@ export function App() {
     try {
       const contents = await Api.readVaultFile(vaultPathRef.current);
       await Api.unlockVault(contents, manualUnlockPassword);
+
+      // Re-register device in family members upon successful manual password entry
+      try {
+        const snapMember = await Api.registerFamilyMember(
+          preferences.currentDeviceName,
+          preferences.currentDeviceId
+        );
+        await persistVaultFile(snapMember.contents);
+      } catch (err) {
+        console.warn("Could not register family member on unlock:", err);
+      }
 
       // Save password in active vault profile in preferences
       const activeId = preferences.activeVaultId;
@@ -781,6 +864,67 @@ export function App() {
     }
   };
 
+  const handleDeleteHistoryItem = async (text: string) => {
+    try {
+      setVaultData((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          purchaseHistory: prev.purchaseHistory.filter(
+            (p) => p.text.trim().toLowerCase() !== text.trim().toLowerCase()
+          ),
+        };
+      });
+      const snap = await Api.deletePurchaseHistoryItem(text);
+      await persistVaultFile(snap.contents);
+      showToast(t("history.itemDeleted") || "Producto eliminado del historial", "🗑️");
+      scheduleDebouncedSync();
+    } catch (e) {
+      console.error("Delete history item error:", e);
+      await refreshVaultData();
+    }
+  };
+
+  const handleReorderLists = async (listIds: string[]) => {
+    try {
+      setVaultData((prev) => {
+        if (!prev) return prev;
+        const map = new Map(prev.shoppingLists.map((l) => [l.id, l]));
+        const reordered: ShoppingList[] = [];
+        for (const id of listIds) {
+          const l = map.get(id);
+          if (l) {
+            reordered.push(l);
+            map.delete(id);
+          }
+        }
+        for (const l of map.values()) {
+          reordered.push(l);
+        }
+        return { ...prev, shoppingLists: reordered };
+      });
+
+      const snap = await Api.reorderShoppingLists(listIds);
+      await persistVaultFile(snap.contents);
+      scheduleDebouncedSync();
+    } catch (e) {
+      console.error("Reorder shopping lists error:", e);
+      await refreshVaultData();
+    }
+  };
+
+  const handleDeleteFamilyMember = async (id: string, name: string) => {
+    try {
+      const snap = await Api.deleteFamilyMember(id);
+      await persistVaultFile(snap.contents);
+      await refreshVaultData();
+      showToast(t("settings.family.deviceDeletedToast", { name }), "🗑️");
+      void performSync(true);
+    } catch (e) {
+      console.error("Delete family member error:", e);
+    }
+  };
+
   const handleCreateList = async (name: string, color: string, icon: string) => {
     try {
       const newListId =
@@ -1141,6 +1285,7 @@ export function App() {
             onDeleteList={handleDeleteList}
             onArchiveList={handleArchiveList}
             onUnarchiveList={handleUnarchiveList}
+            onReorderLists={handleReorderLists}
             onAddItem={handleAddItem}
             onToggleItem={handleToggleItem}
             onDeleteItem={handleDeleteItem}
@@ -1166,6 +1311,7 @@ export function App() {
             lists={vaultData?.shoppingLists || []}
             onAddItem={handleAddItem}
             onClearHistory={handleClearHistory}
+            onDeleteItem={handleDeleteHistoryItem}
             selectedListId={selectedListId}
           />
         )}
@@ -1201,6 +1347,7 @@ export function App() {
         onSavePreferences={setPreferences}
         vaultData={vaultData}
         onShowToast={showToast}
+        onDeleteDevice={handleDeleteFamilyMember}
       />
 
       {/* Vault Manager Modal */}

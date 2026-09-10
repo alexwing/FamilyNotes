@@ -89,6 +89,14 @@ const Api = {
     invoke<VaultSnapshot>("delete_catalog_item", { id }),
   clearPurchaseHistory: () =>
     invoke<VaultSnapshot>("clear_purchase_history"),
+  deletePurchaseHistoryItem: (text: string) =>
+    invoke<VaultSnapshot>("delete_purchase_history_item", { text }),
+  deleteFamilyMember: (id: string) =>
+    invoke<VaultSnapshot>("delete_family_member", { id }),
+  registerFamilyMember: (name: string, deviceId: string) =>
+    invoke<VaultSnapshot>("register_family_member", { name, deviceId }),
+  reorderShoppingLists: (listIds: string[]) =>
+    invoke<VaultSnapshot>("reorder_shopping_lists", { listIds }),
 };
 
 export default Api;

@@ -1,5 +1,5 @@
 import React from "react";
-import { Plus, History, TrendingUp } from "lucide-react";
+import { Plus, History, TrendingUp, Trash2 } from "lucide-react";
 import { PurchaseHistoryItem, ShoppingList } from "../types";
 import { useTranslation } from "../context/LanguageContext";
 
@@ -8,6 +8,7 @@ interface HistoryViewProps {
   lists: ShoppingList[];
   onAddItem: (listId: string, text: string, emoji?: string, category?: string) => void;
   onClearHistory: () => void;
+  onDeleteItem?: (text: string) => void;
   selectedListId: string;
 }
 
@@ -16,6 +17,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
   lists,
   onAddItem,
   onClearHistory,
+  onDeleteItem,
   selectedListId,
 }) => {
   const { t } = useTranslation();
@@ -108,18 +110,29 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
                   </div>
                 </div>
 
-                {currentList && (
-                  <button
-                    onClick={() =>
-                      onAddItem(currentList.id, item.text, item.emoji, item.category)
-                    }
-                    title={t("history.addToList", { name: currentList.name })}
-                    className="px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-600 dark:text-emerald-400 hover:text-slate-950 dark:hover:text-slate-950 font-bold text-xs rounded-xl border border-emerald-500/30 transition flex items-center gap-1 cursor-pointer"
-                  >
-                    <Plus size={13} />
-                    <span>{t("lists.addBtn")}</span>
-                  </button>
-                )}
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {currentList && (
+                    <button
+                      onClick={() =>
+                        onAddItem(currentList.id, item.text, item.emoji, item.category)
+                      }
+                      title={t("history.addToList", { name: currentList.name })}
+                      className="px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-600 dark:text-emerald-400 hover:text-slate-950 dark:hover:text-slate-950 font-bold text-xs rounded-xl border border-emerald-500/30 transition flex items-center gap-1 cursor-pointer"
+                    >
+                      <Plus size={13} />
+                      <span>{t("lists.addBtn")}</span>
+                    </button>
+                  )}
+                  {onDeleteItem && (
+                    <button
+                      onClick={() => onDeleteItem(item.text)}
+                      title={t("common.delete")}
+                      className="p-1.5 text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 hover:bg-rose-500/10 rounded-xl transition cursor-pointer"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>

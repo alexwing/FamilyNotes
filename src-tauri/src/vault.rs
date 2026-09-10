@@ -840,3 +840,75 @@ pub fn clear_purchase_history(
     data.revision += 1;
     mgr.seal_current()
 }
+
+#[tauri::command]
+pub fn delete_family_member(
+    id: String,
+    state: State<'_, VaultState>,
+) -> Result<VaultSnapshot, String> {
+    let mut mgr = state.lock().map_err(|_| "mutex_lock_failed")?;
+    let data = mgr.data.as_mut().ok_or_else(|| "vault_locked".to_string())?;
+
+    data.members.retain(|m| m.id != id);
+    data.revision += 1;
+    mgr.seal_current()
+}
+
+#[tauri::command]
+pub fn register_family_member(
+    name: String,
+    device_id: String,
+    state: State<'_, VaultState>,
+) -> Result<VaultSnapshot, String> {
+    let mut mgr = state.lock().map_err(|_| "mutex_lock_failed")?;
+    let data = mgr.data.as_mut().ok_or_else(|| "vault_locked".to_string())?;
+
+    if let Some(existing) = data.members.iter_mut().find(|m| m.device_id == device_id || m.name.eq_ignore_ascii_case(&name)) {
+        existing.name = name;
+        existing.device_id = device_id;
+    } else {
+        data.members.push(crate::models::FamilyMember {
+            id: Uuid::new_v4().to_string(),
+            name,
+            device_id,
+            color: "#38bdf8".to_string(),
+        });
+    }
+
+    data.revision += 1;
+    mgr.seal_current()
+}
+
+#[tauri::command]
+pub fn delete_purchase_history_item(
+    text: String,
+    state: State<'_, VaultState>,
+) -> Result<VaultSnapshot, String> {
+    let mut mgr = state.lock().map_err(|_| "mutex_lock_failed")?;
+    let data = mgr.data.as_mut().ok_or_else(|| "vault_locked".to_string())?;
+
+    let norm_target = text.trim().to_lowercase();
+    data.purchase_history.retain(|p| p.text.trim().to_lowercase() != norm_target);
+    data.revision += 1;
+    mgr.seal_current()
+}
+
+#[tauri::command]
+pub fn reorder_shopping_lists(
+    list_ids: Vec<String>,
+    state: State<'_, VaultState>,
+) -> Result<VaultSnapshot, String> {
+    let mut mgr = state.lock().map_err(|_| "mutex_lock_failed")?;
+    let data = mgr.data.as_mut().ok_or_else(|| "vault_locked".to_string())?;
+
+    let mut new_lists = Vec::with_capacity(data.shopping_lists.len());
+    for id in &list_ids {
+        if let Some(idx) = data.shopping_lists.iter().position(|l| &l.id == id) {
+            new_lists.push(data.shopping_lists.remove(idx));
+        }
+    }
+    new_lists.append(&mut data.shopping_lists);
+    data.shopping_lists = new_lists;
+    data.revision += 1;
+    mgr.seal_current()
+}
