@@ -869,6 +869,64 @@ export function App() {
     }
   };
 
+  const handleArchiveNote = async (id: string) => {
+    setVaultData((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        notes: prev.notes.map((n) =>
+          n.id === id ? { ...n, archived: true, updatedAt: new Date().toISOString() } : n
+        ),
+      };
+    });
+
+    try {
+      const existing = (vaultData?.notes || []).find((n) => n.id === id);
+      if (!existing) return;
+      const updated: Note = {
+        ...existing,
+        archived: true,
+        updatedAt: new Date().toISOString(),
+      };
+      const snap = await Api.upsertNote(updated);
+      await persistVaultFile(snap.contents);
+      showToast("Nota archivada", "📦");
+      scheduleDebouncedSync();
+    } catch (e) {
+      console.error("Archive note error:", e);
+      await refreshVaultData();
+    }
+  };
+
+  const handleUnarchiveNote = async (id: string) => {
+    setVaultData((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        notes: prev.notes.map((n) =>
+          n.id === id ? { ...n, archived: false, updatedAt: new Date().toISOString() } : n
+        ),
+      };
+    });
+
+    try {
+      const existing = (vaultData?.notes || []).find((n) => n.id === id);
+      if (!existing) return;
+      const updated: Note = {
+        ...existing,
+        archived: false,
+        updatedAt: new Date().toISOString(),
+      };
+      const snap = await Api.upsertNote(updated);
+      await persistVaultFile(snap.contents);
+      showToast("Nota desarchivada", "✅");
+      scheduleDebouncedSync();
+    } catch (e) {
+      console.error("Unarchive note error:", e);
+      await refreshVaultData();
+    }
+  };
+
   // Manual Sync
   const handleManualSync = async () => {
     if (syncTimeoutRef.current) {
@@ -1040,6 +1098,8 @@ export function App() {
             notes={vaultData?.notes || []}
             onSaveNote={handleSaveNote}
             onDeleteNote={handleDeleteNote}
+            onArchiveNote={handleArchiveNote}
+            onUnarchiveNote={handleUnarchiveNote}
           />
         )}
 

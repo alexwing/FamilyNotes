@@ -1,25 +1,33 @@
 import React, { useState } from "react";
-import { Plus, Trash2, Pin, Search } from "lucide-react";
+import { Plus, Trash2, Pin, Search, Archive, ArchiveRestore } from "lucide-react";
 import { Note } from "../types";
 
 interface NotesViewProps {
   notes: Note[];
   onSaveNote: (note: Note) => void;
   onDeleteNote: (id: string) => void;
+  onArchiveNote?: (id: string) => void;
+  onUnarchiveNote?: (id: string) => void;
 }
 
 export const NotesView: React.FC<NotesViewProps> = ({
   notes,
   onSaveNote,
   onDeleteNote,
+  onArchiveNote,
+  onUnarchiveNote,
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [showArchived, setShowArchived] = useState(false);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [pendingDeleteNote, setPendingDeleteNote] = useState<Note | null>(null);
   const [lastDeletedNote, setLastDeletedNote] = useState<Note | null>(null);
 
-  const filteredNotes = [...notes]
+  const activeNotes = notes.filter((n) => !n.archived);
+  const archivedNotes = notes.filter((n) => !!n.archived);
+
+  const filteredNotes = activeNotes
     .filter(
       (n) =>
         n.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -32,6 +40,12 @@ export const NotesView: React.FC<NotesViewProps> = ({
       }
       return a.pinned ? -1 : 1;
     });
+
+  const filteredArchivedNotes = archivedNotes.filter(
+    (n) =>
+      n.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      n.content.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const handleOpenCreate = () => {
     setEditingNote({
@@ -76,7 +90,7 @@ export const NotesView: React.FC<NotesViewProps> = ({
   return (
     <div className="flex-1 flex flex-col overflow-y-auto min-h-0 max-w-5xl mx-auto w-full p-4 sm:p-6 space-y-4">
       {/* Top Search & Add Bar */}
-      <div className="flex items-center gap-3 shrink-0">
+      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
         <div className="flex-1 flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-2xl px-3 py-2 text-xs">
           <Search size={16} className="text-slate-400 shrink-0" />
           <input
@@ -88,12 +102,30 @@ export const NotesView: React.FC<NotesViewProps> = ({
           />
         </div>
 
+        {/* Botón no destacado para desplegar archivadas */}
+        {archivedNotes.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setShowArchived((prev) => !prev)}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-2xl text-xs font-semibold transition border cursor-pointer shrink-0 ${
+              showArchived
+                ? "bg-slate-800 text-amber-300 border-amber-500/40"
+                : "bg-slate-900/60 text-slate-400 border-slate-800 hover:text-slate-300 hover:border-slate-700"
+            }`}
+            title="Desplegar notas archivadas"
+          >
+            <Archive size={14} />
+            <span className="hidden sm:inline">Archivadas</span>
+            <span className="text-[10px] opacity-75">({archivedNotes.length})</span>
+          </button>
+        )}
+
         <button
           onClick={handleOpenCreate}
-          className="flex items-center gap-1.5 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-2xl text-xs transition shrink-0 shadow-md shadow-emerald-500/20"
+          className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-2xl text-xs transition shrink-0 shadow-md shadow-emerald-500/20 cursor-pointer"
         >
           <Plus size={16} />
-          <span>Nueva Nota</span>
+          <span className="hidden sm:inline">Nueva Nota</span>
         </button>
       </div>
 
@@ -151,6 +183,67 @@ export const NotesView: React.FC<NotesViewProps> = ({
         )}
       </div>
 
+      {/* ARCHIVED NOTES SECTION (UNFOLDED VIA BUTTON) */}
+      {showArchived && archivedNotes.length > 0 && (
+        <div className="p-3.5 sm:p-4 bg-slate-900/50 border border-amber-500/20 rounded-2xl space-y-3 shrink-0">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Archive size={15} className="text-amber-400" />
+              <h3 className="text-xs font-bold text-amber-200 uppercase tracking-wider">
+                Notas Archivadas ({archivedNotes.length})
+              </h3>
+            </div>
+            <span className="text-[10px] text-slate-500 font-medium">Solo lectura: desarchivar o eliminar</span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+            {filteredArchivedNotes.map((note) => (
+              <div
+                key={note.id}
+                className="bg-slate-950/80 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between space-y-3 shadow-sm select-none"
+              >
+                <div>
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <h4 className="font-bold text-slate-300 text-sm tracking-tight line-clamp-1">
+                      {note.title}
+                    </h4>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-400 font-semibold border border-amber-500/20">
+                      Archivada
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 whitespace-pre-wrap line-clamp-5 font-normal">
+                    {note.content}
+                  </p>
+                </div>
+
+                {/* Solo desarchivar o eliminar - NO EDITAR */}
+                <div className="flex items-center justify-between pt-2 border-t border-slate-800/80 text-xs">
+                  {onUnarchiveNote && (
+                    <button
+                      type="button"
+                      onClick={() => onUnarchiveNote(note.id)}
+                      className="flex items-center gap-1 text-emerald-400 hover:text-emerald-300 font-semibold text-[11px] transition cursor-pointer"
+                    >
+                      <ArchiveRestore size={13} />
+                      <span>Desarchivar</span>
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => setPendingDeleteNote(note)}
+                    className="p-1 text-slate-500 hover:text-rose-400 transition cursor-pointer ml-auto"
+                    title="Eliminar definitivamente"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {lastDeletedNote && (
         <div className="fixed bottom-4 right-4 z-50 max-w-sm w-[calc(100%-2rem)] rounded-2xl border border-amber-500/30 bg-slate-900/95 p-3 shadow-2xl shadow-amber-950/30 backdrop-blur-sm">
           <div className="flex items-start justify-between gap-3">
@@ -189,35 +282,54 @@ export const NotesView: React.FC<NotesViewProps> = ({
         </div>
       )}
 
+      {/* CONFIRM DELETE OR ARCHIVE DIALOGUE */}
       {pendingDeleteNote && (
-        <div className="fixed inset-0 bg-slate-950 md:bg-black/60 md:backdrop-blur-sm z-50 flex items-center justify-center md:p-4">
-          <div className="bg-slate-900 md:border border-slate-800 md:rounded-2xl p-5 max-w-md w-[92vw] space-y-4 md:shadow-2xl">
+        <div className="fixed inset-0 bg-slate-950/80 md:bg-black/60 md:backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 max-w-md w-full space-y-4 shadow-2xl">
             <div>
               <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-rose-400">
-                Confirmar eliminación
+                {pendingDeleteNote.archived ? "Eliminar nota archivada" : "Eliminar o archivar nota"}
               </p>
               <h3 className="mt-2 text-sm font-bold text-white">
-                ¿Eliminar "{pendingDeleteNote.title || "esta nota"}"?
+                ¿Qué deseas hacer con "{pendingDeleteNote.title || "esta nota"}"?
               </h3>
               <p className="mt-2 text-xs text-slate-400">
-                Podrás recuperarla desde la notificación de eliminación antes de salir de la pantalla.
+                {pendingDeleteNote.archived
+                  ? "Esta nota ya está archivada. Se borrará permanentemente de tu bóveda."
+                  : "Puedes archivarla para ocultarla de la lista principal sin perder su información, o eliminarla definitivamente."}
               </p>
             </div>
 
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex flex-col sm:flex-row justify-end gap-2 pt-2">
               <button
                 type="button"
                 onClick={() => setPendingDeleteNote(null)}
-                className="px-4 py-2 rounded-xl text-xs text-slate-400 hover:text-white"
+                className="px-4 py-2 rounded-xl text-xs text-slate-400 hover:text-white order-last sm:order-first"
               >
                 Cancelar
               </button>
+
+              {!pendingDeleteNote.archived && onArchiveNote && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onArchiveNote(pendingDeleteNote.id);
+                    setPendingDeleteNote(null);
+                  }}
+                  className="flex items-center justify-center gap-1.5 px-4 py-2 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 font-bold rounded-xl text-xs transition cursor-pointer"
+                >
+                  <Archive size={14} />
+                  <span>Archivar</span>
+                </button>
+              )}
+
               <button
                 type="button"
                 onClick={handleDeleteConfirmed}
-                className="px-4 py-2 bg-rose-500 hover:bg-rose-400 text-white font-bold rounded-xl text-xs transition"
+                className="flex items-center justify-center gap-1.5 px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl text-xs transition cursor-pointer"
               >
-                Eliminar
+                <Trash2 size={14} />
+                <span>Eliminar definitivamente</span>
               </button>
             </div>
           </div>
@@ -286,17 +398,32 @@ export const NotesView: React.FC<NotesViewProps> = ({
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-3 shrink-0 border-t border-slate-800/80 bg-slate-900 mt-1 pb-1">
+            <div className="flex items-center justify-end gap-2 pt-3 shrink-0 border-t border-slate-800/80 bg-slate-900 mt-1 pb-1">
+              {editingNote.id && onArchiveNote && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onArchiveNote(editingNote.id);
+                    setIsModalOpen(false);
+                    setEditingNote(null);
+                  }}
+                  className="px-3.5 py-2 rounded-xl text-xs text-amber-300 hover:bg-amber-500/10 border border-amber-500/25 font-semibold flex items-center gap-1.5 mr-auto cursor-pointer"
+                >
+                  <Archive size={13} />
+                  <span>Archivar nota</span>
+                </button>
+              )}
+
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="px-4 py-2 rounded-xl text-xs text-slate-400 hover:text-white"
+                className="px-4 py-2 rounded-xl text-xs text-slate-400 hover:text-white cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs transition"
+                className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs transition cursor-pointer"
               >
                 Guardar Nota
               </button>

@@ -30,6 +30,7 @@ export interface Note {
   pinned: boolean;
   createdAt: string;
   updatedAt: string;
+  archived?: boolean;
 }
 
 export interface PurchaseHistoryItem {

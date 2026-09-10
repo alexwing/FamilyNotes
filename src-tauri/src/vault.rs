@@ -166,6 +166,7 @@ fn seed_sample_data(device_name: &str, device_id: &str) -> VaultData {
                 pinned: true,
                 created_at: now.clone(),
                 updated_at: now.clone(),
+                archived: false,
             },
             Note {
                 id: Uuid::new_v4().to_string(),
@@ -175,6 +176,7 @@ fn seed_sample_data(device_name: &str, device_id: &str) -> VaultData {
                 pinned: false,
                 created_at: now.clone(),
                 updated_at: now.clone(),
+                archived: false,
             },
         ],
         purchase_history: vec![
