@@ -26,7 +26,7 @@ interface ShoppingListViewProps {
   onDeleteList: (id: string) => void;
   onArchiveList?: (id: string) => void;
   onUnarchiveList?: (id: string) => void;
-  onAddItem: (listId: string, text: string, emoji?: string, category?: string) => void;
+  onAddItem: (listId: string, text: string, emoji?: string, category?: string, addToDictionary?: boolean) => void;
   onToggleItem: (listId: string, itemId: string) => void;
   onDeleteItem: (listId: string, itemId: string) => void;
   onClearCompleted: (listId: string) => void;
@@ -509,8 +509,8 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
             history={history}
             customCatalog={customCatalog}
             onOpenCatalogModal={onOpenCatalogModal}
-            onAddItem={(text, emoji, category) =>
-              onAddItem(currentList.id, text, emoji, category)
+            onAddItem={(text, emoji, category, addToDictionary) =>
+              onAddItem(currentList.id, text, emoji, category, addToDictionary)
             }
             placeholder={t("lists.searchPlaceholder", { name: currentList.name })}
           />

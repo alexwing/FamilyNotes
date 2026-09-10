@@ -16,6 +16,7 @@ const es = {
     create: "Crear",
     edit: "Editar",
     back: "Volver",
+    category: "Categoría",
   },
   nav: {
     lists: "Listas",
@@ -73,6 +74,8 @@ const es = {
     replenishQuestion: "¿Añadir {{text}}?",
     addBtn: "+ Añadir",
     searchPlaceholder: "Añadir a {{name}}...",
+    addedToListAndDictionary: '"{{text}}" añadido a la lista y al diccionario',
+    updatedInDictionary: '"{{text}}" actualizado en el diccionario',
   },
   notes: {
     title: "Notas Familiares",

@@ -23,6 +23,7 @@ import { VaultManagerModal } from "./components/VaultManagerModal";
 import { ProductCatalogModal } from "./components/ProductCatalogModal";
 import { BottomNav } from "./components/BottomNav";
 import { useTranslation } from "./context/LanguageContext";
+import { BUILTIN_DICTIONARY, normalizeText } from "./utils/productDictionary";
 
 const DEFAULT_VAULT_FILENAME = "family_notes.fnvault";
 
@@ -610,20 +611,74 @@ export function App() {
   };
 
   // Shopping List Operations
-  const handleAddItem = async (listId: string, text: string, emoji?: string, category?: string) => {
+  const handleAddItem = async (
+    listId: string,
+    text: string,
+    emoji?: string,
+    category?: string,
+    addToDictionary?: boolean
+  ) => {
     try {
+      const trimmedText = text.trim();
+      const finalEmoji = emoji || "🛒";
+      const finalCategory = category || "General";
+
       const item: ShoppingItem = {
         id: "",
-        text: text.trim(),
-        emoji: emoji || "🛒",
-        category: category || "General",
+        text: trimmedText,
+        emoji: finalEmoji,
+        category: finalCategory,
         checked: false,
         checkedBy: preferences.currentDeviceName,
         createdAt: "",
         updatedAt: "",
       };
       const snap = await Api.upsertShoppingItem(listId, item);
-      await persistVaultFile(snap.contents);
+      let finalContents = snap.contents;
+
+      // If user customized icon & category, add to dictionary if not existing
+      if (addToDictionary && trimmedText) {
+        const norm = normalizeText(trimmedText);
+        const existingInCatalog = (vaultData?.catalog || []).find(
+          (c) => normalizeText(c.name) === norm
+        );
+        const existingInBuiltin = BUILTIN_DICTIONARY.find(
+          (b) => normalizeText(b.name) === norm
+        );
+
+        if (!existingInCatalog && !existingInBuiltin) {
+          const words = trimmedText
+            .toLowerCase()
+            .split(/\s+/)
+            .filter((w) => w.length > 2);
+          const keywords = Array.from(new Set([trimmedText.toLowerCase(), ...words]));
+
+          const newCatItem: ProductCatalogItem = {
+            id: "",
+            name: trimmedText,
+            emoji: finalEmoji,
+            category: finalCategory,
+            keywords,
+          };
+          const catSnap = await Api.upsertCatalogItem(newCatItem);
+          finalContents = catSnap.contents;
+          showToast(t("lists.addedToListAndDictionary", { text: trimmedText }), "📚");
+        } else if (
+          existingInCatalog &&
+          (existingInCatalog.emoji !== finalEmoji || existingInCatalog.category !== finalCategory)
+        ) {
+          const updatedCatItem: ProductCatalogItem = {
+            ...existingInCatalog,
+            emoji: finalEmoji,
+            category: finalCategory,
+          };
+          const catSnap = await Api.upsertCatalogItem(updatedCatItem);
+          finalContents = catSnap.contents;
+          showToast(t("lists.updatedInDictionary", { text: trimmedText }), "📚");
+        }
+      }
+
+      await persistVaultFile(finalContents);
       await refreshVaultData();
       scheduleDebouncedSync();
     } catch (e) {

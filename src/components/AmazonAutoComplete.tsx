@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
-import { Search, Plus, Sparkles, BookOpen } from "lucide-react";
+import { Search, Plus, Sparkles, BookOpen, ChevronDown, Check } from "lucide-react";
 import { PurchaseHistoryItem, ProductCatalogItem } from "../types";
 import {
   matchProduct,
   BUILTIN_DICTIONARY,
+  CATEGORIES,
   normalizeText,
 } from "../utils/productDictionary";
 import { useTranslation } from "../context/LanguageContext";
@@ -11,7 +12,7 @@ import { useTranslation } from "../context/LanguageContext";
 interface AmazonAutoCompleteProps {
   history: PurchaseHistoryItem[];
   customCatalog?: ProductCatalogItem[];
-  onAddItem: (text: string, emoji?: string, category?: string) => void;
+  onAddItem: (text: string, emoji?: string, category?: string, addToDictionary?: boolean) => void;
   onOpenCatalogModal?: () => void;
   placeholder?: string;
 }
@@ -32,7 +33,9 @@ export const AmazonAutoComplete: React.FC<AmazonAutoCompleteProps> = ({
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [customEmoji, setCustomEmoji] = useState<string | null>(null);
+  const [customCategory, setCustomCategory] = useState<string | null>(null);
   const [showEmojiMenu, setShowEmojiMenu] = useState(false);
+  const [showCategoryMenu, setShowCategoryMenu] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Dynamic intelligent match from dictionary based on what user is currently typing
@@ -42,7 +45,8 @@ export const AmazonAutoComplete: React.FC<AmazonAutoCompleteProps> = ({
   }, [query, customCatalog]);
 
   const activeEmoji = customEmoji || smartMatch.emoji;
-  const activeCategory = smartMatch.category;
+  const activeCategory = customCategory || smartMatch.category;
+  const currentCatObj = CATEGORIES.find((c) => c.id === activeCategory);
 
   // Filter history items matching query
   const historyMatches = useMemo(() => {
@@ -92,6 +96,7 @@ export const AmazonAutoComplete: React.FC<AmazonAutoCompleteProps> = ({
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setIsOpen(false);
         setShowEmojiMenu(false);
+        setShowCategoryMenu(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -99,17 +104,23 @@ export const AmazonAutoComplete: React.FC<AmazonAutoCompleteProps> = ({
   }, []);
 
   const handleSelectHistory = (item: PurchaseHistoryItem) => {
-    onAddItem(item.text, item.emoji, item.category);
+    onAddItem(item.text, item.emoji, item.category, false);
     setQuery("");
     setCustomEmoji(null);
+    setCustomCategory(null);
     setIsOpen(false);
+    setShowEmojiMenu(false);
+    setShowCategoryMenu(false);
   };
 
   const handleSelectCatalog = (item: { name: string; emoji: string; category: string }) => {
-    onAddItem(item.name, item.emoji, item.category);
+    onAddItem(item.name, item.emoji, item.category, false);
     setQuery("");
     setCustomEmoji(null);
+    setCustomCategory(null);
     setIsOpen(false);
+    setShowEmojiMenu(false);
+    setShowCategoryMenu(false);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -117,32 +128,43 @@ export const AmazonAutoComplete: React.FC<AmazonAutoCompleteProps> = ({
     const val = query.trim();
     if (!val) return;
 
-    onAddItem(val, activeEmoji, activeCategory);
+    const isCustom =
+      Boolean(customEmoji && customCategory) ||
+      (Boolean(customEmoji || customCategory) && activeEmoji !== "🛒" && activeCategory !== "General");
+
+    onAddItem(val, activeEmoji, activeCategory, isCustom);
     setQuery("");
     setCustomEmoji(null);
+    setCustomCategory(null);
     setIsOpen(false);
+    setShowEmojiMenu(false);
+    setShowCategoryMenu(false);
   };
 
   return (
     <div ref={containerRef} className="relative w-full">
       <form
         onSubmit={handleSubmit}
-        className="flex items-center gap-2 bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 focus-within:border-emerald-500 rounded-2xl p-1.5 pl-2.5 shadow-md dark:shadow-lg transition-all"
+        className="flex items-center gap-1.5 sm:gap-2 bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 focus-within:border-emerald-500 rounded-2xl p-1.5 pl-2 shadow-md dark:shadow-lg transition-all"
       >
         {/* Dynamic Emoji Button with click-to-change picker */}
-        <div className="relative">
+        <div className="relative shrink-0">
           <button
             type="button"
-            onClick={() => setShowEmojiMenu(!showEmojiMenu)}
-            title="Icono detectado automáticamente. Haz clic para cambiarlo."
-            className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/90 dark:hover:bg-slate-700 flex items-center justify-center text-lg transition-transform active:scale-95 cursor-pointer"
+            onClick={() => {
+              setShowEmojiMenu(!showEmojiMenu);
+              setShowCategoryMenu(false);
+              setIsOpen(false);
+            }}
+            title="Icono. Haz clic para cambiarlo."
+            className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/90 dark:hover:bg-slate-700 flex items-center justify-center text-lg transition-transform active:scale-95 cursor-pointer shrink-0"
           >
             <span>{activeEmoji}</span>
           </button>
 
           {/* Quick Emoji Menu */}
           {showEmojiMenu && (
-            <div className="absolute top-full left-0 mt-2 z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-2 shadow-2xl grid grid-cols-6 gap-1 w-52 max-h-44 overflow-y-auto">
+            <div className="absolute top-full left-0 mt-2 z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-2 shadow-2xl grid grid-cols-6 gap-1 w-52 max-h-44 overflow-y-auto animate-in fade-in zoom-in-95 duration-100">
               {QUICK_EMOJIS.map((em) => (
                 <button
                   key={em}
@@ -167,20 +189,72 @@ export const AmazonAutoComplete: React.FC<AmazonAutoCompleteProps> = ({
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
-            setCustomEmoji(null);
+            if (!e.target.value.trim()) {
+              setCustomEmoji(null);
+              setCustomCategory(null);
+            }
             setIsOpen(true);
           }}
           onFocus={() => setIsOpen(true)}
           placeholder={placeholder}
-          className="w-full bg-transparent text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none"
+          className="w-full bg-transparent text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none min-w-0"
         />
 
-        {/* Category preview badge if detected */}
-        {query.trim() && smartMatch.category !== "General" && (
-          <span className="hidden md:inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/25 shrink-0">
-            {smartMatch.category}
-          </span>
-        )}
+        {/* Category selector button & popover */}
+        <div className="relative shrink-0">
+          <button
+            type="button"
+            onClick={() => {
+              setShowCategoryMenu(!showCategoryMenu);
+              setShowEmojiMenu(false);
+              setIsOpen(false);
+            }}
+            title={activeCategory}
+            className={`flex items-center gap-1 text-[11px] font-medium py-1 px-2 rounded-xl transition cursor-pointer border ${
+              customCategory
+                ? "bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/40 shadow-sm"
+                : activeCategory !== "General"
+                ? "bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800/60"
+                : "bg-slate-100 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700/80 hover:border-slate-300"
+            }`}
+          >
+            <span className="text-xs shrink-0">{currentCatObj?.emoji || "🏷️"}</span>
+            <span className="max-w-[60px] sm:max-w-[95px] truncate font-semibold">
+              {activeCategory}
+            </span>
+            <ChevronDown size={11} className="shrink-0 opacity-60" />
+          </button>
+
+          {/* Category Dropdown Popover */}
+          {showCategoryMenu && (
+            <div className="absolute right-0 top-full mt-2 z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-1.5 shadow-2xl w-48 sm:w-56 max-h-60 overflow-y-auto space-y-0.5 animate-in fade-in zoom-in-95 duration-100">
+              <div className="px-2 py-1 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider border-b border-slate-100 dark:border-slate-800 mb-1">
+                {t("common.category") || "Categoría"}
+              </div>
+              {CATEGORIES.map((cat) => (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => {
+                    setCustomCategory(cat.id);
+                    setShowCategoryMenu(false);
+                  }}
+                  className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs text-left transition cursor-pointer ${
+                    activeCategory === cat.id
+                      ? "bg-purple-600 text-white font-bold shadow-sm"
+                      : "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200"
+                  }`}
+                >
+                  <span className="flex items-center gap-2 truncate">
+                    <span>{cat.emoji}</span>
+                    <span className="truncate">{cat.name}</span>
+                  </span>
+                  {activeCategory === cat.id && <Check size={12} className="shrink-0" />}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
         <button
           type="submit"
