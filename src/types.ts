@@ -19,6 +19,7 @@ export interface ShoppingList {
   items: ShoppingItem[];
   createdAt: string;
   updatedAt: string;
+  archived?: boolean;
 }
 
 export interface Note {

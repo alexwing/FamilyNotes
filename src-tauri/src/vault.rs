@@ -131,6 +131,7 @@ fn seed_sample_data(device_name: &str, device_id: &str) -> VaultData {
                 ],
                 created_at: now.clone(),
                 updated_at: now.clone(),
+                archived: false,
             },
             ShoppingList {
                 id: Uuid::new_v4().to_string(),
@@ -153,6 +154,7 @@ fn seed_sample_data(device_name: &str, device_id: &str) -> VaultData {
                 ],
                 created_at: now.clone(),
                 updated_at: now.clone(),
+                archived: false,
             },
         ],
         notes: vec![

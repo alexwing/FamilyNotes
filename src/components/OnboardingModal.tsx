@@ -199,9 +199,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
 
             {step === 1 ? (
               <form onSubmit={handleStep1} className="space-y-5 text-center">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center text-3xl mx-auto shadow-lg shadow-emerald-500/20">
-                  🛒
-                </div>
+                <img src="/icon.png" alt="FamilyNotes" className="w-14 h-14 rounded-2xl mx-auto shadow-lg shadow-emerald-500/20" />
 
                 <div>
                   <h2 className="text-xl font-bold text-white tracking-tight">

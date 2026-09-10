@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Lock, FolderLock } from "lucide-react";
 import Api from "./api";
 import {
@@ -89,21 +90,132 @@ export function App() {
     }
   }, []);
 
-  // Auto-Sync in background if configured
-  const triggerAutoSync = useCallback(async () => {
+  const isSyncingRef = useRef(false);
+  const hasPendingChangesRef = useRef(false);
+  const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Core Sync Executor (Safely non-reentrant)
+  const performSync = useCallback(async (isSilent = true) => {
+    if (isSyncingRef.current) return;
     try {
       const cfg = await Api.getSyncConfig();
-      if (cfg.enabled && cfg.autoSync && cfg.host.trim()) {
-        setSyncing(true);
-        const snap = await Api.syncNow();
-        await persistVaultFile(snap.contents);
-        await refreshVaultData();
-        setSyncing(false);
+      if (!cfg.enabled || !cfg.host.trim()) return;
+
+      isSyncingRef.current = true;
+      setSyncing(true);
+
+      const snap = await Api.syncNow();
+      await persistVaultFile(snap.contents);
+      await refreshVaultData();
+      hasPendingChangesRef.current = false;
+      if (!isSilent) {
+        showToast("Sincronización FTP completada", "📡");
       }
-    } catch {
+    } catch (err: unknown) {
+      if (!isSilent) {
+        const msg = err instanceof Error ? err.message : String(err);
+        showToast(`Error al sincronizar: ${msg}`, "❌");
+      }
+      console.warn("Sync failed or skipped:", err);
+    } finally {
+      isSyncingRef.current = false;
       setSyncing(false);
     }
-  }, [persistVaultFile, refreshVaultData]);
+  }, [persistVaultFile, refreshVaultData, showToast]);
+
+  // Schedule a debounced sync after user stops modifying things (10s inactivity)
+  const scheduleDebouncedSync = useCallback(() => {
+    hasPendingChangesRef.current = true;
+    if (syncTimeoutRef.current) {
+      clearTimeout(syncTimeoutRef.current);
+    }
+    syncTimeoutRef.current = setTimeout(() => {
+      void performSync(true);
+    }, 10000); // 10 seconds of quiet time
+  }, [performSync]);
+
+  // Smart Sync Listeners:
+  // 1. Sync immediately when app loses focus or goes to background (if changes pending)
+  // 2. Silent pull on return to foreground (if no unsaved changes)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        if (hasPendingChangesRef.current && isUnlocked) {
+          if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+          void performSync(true);
+        }
+      } else {
+        if (isUnlocked && !hasPendingChangesRef.current) {
+          void performSync(true);
+        }
+      }
+    };
+
+    const handleBlur = () => {
+      if (hasPendingChangesRef.current && isUnlocked) {
+        if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+        void performSync(true);
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("blur", handleBlur);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("blur", handleBlur);
+    };
+  }, [isUnlocked, performSync]);
+
+  // Periodic Cron: check every 60 seconds
+  useEffect(() => {
+    if (!isUnlocked) return;
+    const interval = setInterval(() => {
+      void performSync(true);
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [isUnlocked, performSync]);
+
+  // Restore & Persist Window State (Fullscreen / Maximized / Windowed) on Desktop
+  useEffect(() => {
+    try {
+      const appWindow = getCurrentWindow();
+      const saved = localStorage.getItem("fn_window_state");
+      if (saved) {
+        try {
+          const { isMaximized, isFullscreen } = JSON.parse(saved);
+          if (isFullscreen) {
+            void appWindow.setFullscreen(true);
+          } else if (isMaximized) {
+            void appWindow.maximize();
+          }
+        } catch {}
+      }
+
+      let timer: ReturnType<typeof setTimeout>;
+      const saveState = async () => {
+        try {
+          const isMax = await appWindow.isMaximized();
+          const isFull = await appWindow.isFullscreen();
+          localStorage.setItem(
+            "fn_window_state",
+            JSON.stringify({ isMaximized: isMax, isFullscreen: isFull })
+          );
+        } catch {}
+      };
+
+      const unlistenPromise = appWindow.onResized(() => {
+        clearTimeout(timer);
+        timer = setTimeout(saveState, 300);
+      });
+
+      return () => {
+        void unlistenPromise.then((fn) => fn?.());
+      };
+    } catch {
+      // Graceful fallback on Android/iOS/web
+    }
+  }, []);
 
   // Initial Boot & Multi-Vault Setup
   useEffect(() => {
@@ -165,7 +277,7 @@ export function App() {
               await Api.unlockVault(contents, pass);
               setIsUnlocked(true);
               await refreshVaultData();
-              void triggerAutoSync();
+              void performSync(true);
               showToast(`Bóveda "${active.name}" abierta`, "🔓");
             } catch (err) {
               console.warn("Auto-unlock failed, prompting password:", err);
@@ -301,7 +413,7 @@ export function App() {
       setIsUnlocked(true);
       setManualUnlockPassword("");
       await refreshVaultData();
-      void triggerAutoSync();
+      void performSync(true);
       showToast("Desbloqueado con éxito", "🔓");
     } catch {
       setManualUnlockError("Contraseña incorrecta. Inténtalo de nuevo.");
@@ -342,7 +454,7 @@ export function App() {
         await Api.unlockVault(contents, pass);
         setIsUnlocked(true);
         await refreshVaultData();
-        void triggerAutoSync();
+        void performSync(true);
         showToast(`Bóveda "${vault.name}" abierta`, "🔓");
         return;
       } catch (e) {
@@ -477,7 +589,7 @@ export function App() {
       await persistVaultFile(snap.contents);
       await refreshVaultData();
       showToast(`"${item.name}" guardado en el diccionario`, "📚");
-      void triggerAutoSync();
+      scheduleDebouncedSync();
     } catch (e) {
       console.error("Upsert catalog error:", e);
     }
@@ -489,7 +601,7 @@ export function App() {
       await persistVaultFile(snap.contents);
       await refreshVaultData();
       showToast("Producto eliminado del diccionario", "🗑");
-      void triggerAutoSync();
+      scheduleDebouncedSync();
     } catch (e) {
       console.error("Delete catalog error:", e);
     }
@@ -511,44 +623,91 @@ export function App() {
       const snap = await Api.upsertShoppingItem(listId, item);
       await persistVaultFile(snap.contents);
       await refreshVaultData();
-      void triggerAutoSync();
+      scheduleDebouncedSync();
     } catch (e) {
       console.error("Add item error:", e);
     }
   };
 
   const handleToggleItem = async (listId: string, itemId: string) => {
+    // 1. Optimistic instant UI toggle (0ms)
+    setVaultData((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        shoppingLists: prev.shoppingLists.map((l) =>
+          l.id === listId
+            ? {
+                ...l,
+                items: l.items.map((i) =>
+                  i.id === itemId
+                    ? { ...i, checked: !i.checked, checkedBy: preferences.currentDeviceName }
+                    : i
+                ),
+              }
+            : l
+        ),
+      };
+    });
+
+    // 2. Persist in background without blocking UI
     try {
       const snap = await Api.toggleShoppingItem(listId, itemId, preferences.currentDeviceName);
       await persistVaultFile(snap.contents);
-      await refreshVaultData();
-      void triggerAutoSync();
+      scheduleDebouncedSync();
     } catch (e) {
       console.error("Toggle item error:", e);
+      await refreshVaultData();
     }
   };
 
   const handleDeleteItem = async (listId: string, itemId: string) => {
+    // 1. Optimistic instant UI removal (0ms)
+    setVaultData((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        shoppingLists: prev.shoppingLists.map((l) =>
+          l.id === listId
+            ? { ...l, items: l.items.filter((i) => i.id !== itemId) }
+            : l
+        ),
+      };
+    });
+
+    // 2. Persist in background without blocking UI
     try {
       const snap = await Api.deleteShoppingItem(listId, itemId);
       await persistVaultFile(snap.contents);
-      await refreshVaultData();
-      showToast("Producto eliminado", "🗑");
-      void triggerAutoSync();
+      scheduleDebouncedSync();
     } catch (e) {
       console.error("Delete item error:", e);
+      await refreshVaultData();
     }
   };
 
   const handleClearCompleted = async (listId: string) => {
+    // 1. Optimistic instant UI removal
+    setVaultData((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        shoppingLists: prev.shoppingLists.map((l) =>
+          l.id === listId
+            ? { ...l, items: l.items.filter((i) => !i.checked) }
+            : l
+        ),
+      };
+    });
+
     try {
       const snap = await Api.clearCompletedItems(listId);
       await persistVaultFile(snap.contents);
-      await refreshVaultData();
       showToast("Comprados vaciados", "🧹");
-      void triggerAutoSync();
+      scheduleDebouncedSync();
     } catch (e) {
       console.error("Clear completed error:", e);
+      await refreshVaultData();
     }
   };
 
@@ -559,7 +718,7 @@ export function App() {
       await persistVaultFile(snap.contents);
       await refreshVaultData();
       showToast("Historial borrado", "🗑️");
-      void triggerAutoSync();
+      scheduleDebouncedSync();
     } catch (e) {
       console.error("Clear history error:", e);
     }
@@ -585,7 +744,7 @@ export function App() {
       await refreshVaultData();
       setSelectedListId(newListId);
       showToast(`Lista "${name}" creada`, "📝");
-      void triggerAutoSync();
+      scheduleDebouncedSync();
     } catch (e) {
       console.error("Create list error:", e);
     }
@@ -611,7 +770,7 @@ export function App() {
       await persistVaultFile(snap.contents);
       await refreshVaultData();
       showToast(`Lista "${name}" actualizada`, "✏️");
-      void triggerAutoSync();
+      scheduleDebouncedSync();
     } catch (e) {
       console.error("Update list error:", e);
     }
@@ -627,9 +786,52 @@ export function App() {
         setSelectedListId(remaining[0].id);
       }
       showToast("Lista eliminada", "🗑");
-      void triggerAutoSync();
+      scheduleDebouncedSync();
     } catch (e) {
       console.error("Delete list error:", e);
+    }
+  };
+
+  const handleArchiveList = async (id: string) => {
+    try {
+      const existing = (vaultData?.shoppingLists || []).find((l) => l.id === id);
+      if (!existing) return;
+      const updated: ShoppingList = {
+        ...existing,
+        archived: true,
+        updatedAt: new Date().toISOString(),
+      };
+      const snap = await Api.upsertShoppingList(updated);
+      await persistVaultFile(snap.contents);
+      await refreshVaultData();
+      const remainingActive = (vaultData?.shoppingLists || []).filter((l) => l.id !== id && !l.archived);
+      if (remainingActive.length > 0) {
+        setSelectedListId(remainingActive[0].id);
+      }
+      showToast(`Lista "${existing.name}" archivada`, "📦");
+      scheduleDebouncedSync();
+    } catch (e) {
+      console.error("Archive list error:", e);
+    }
+  };
+
+  const handleUnarchiveList = async (id: string) => {
+    try {
+      const existing = (vaultData?.shoppingLists || []).find((l) => l.id === id);
+      if (!existing) return;
+      const updated: ShoppingList = {
+        ...existing,
+        archived: false,
+        updatedAt: new Date().toISOString(),
+      };
+      const snap = await Api.upsertShoppingList(updated);
+      await persistVaultFile(snap.contents);
+      await refreshVaultData();
+      setSelectedListId(id);
+      showToast(`Lista "${existing.name}" desarchivada`, "✅");
+      scheduleDebouncedSync();
+    } catch (e) {
+      console.error("Unarchive list error:", e);
     }
   };
 
@@ -640,38 +842,39 @@ export function App() {
       await persistVaultFile(snap.contents);
       await refreshVaultData();
       showToast("Nota guardada", "💾");
-      void triggerAutoSync();
+      scheduleDebouncedSync();
     } catch (e) {
       console.error("Save note error:", e);
     }
   };
 
   const handleDeleteNote = async (id: string) => {
+    // 1. Optimistic instant removal
+    setVaultData((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        notes: prev.notes.filter((n) => n.id !== id),
+      };
+    });
+
     try {
       const snap = await Api.deleteNote(id);
       await persistVaultFile(snap.contents);
-      await refreshVaultData();
       showToast("Nota eliminada", "🗑");
-      void triggerAutoSync();
+      scheduleDebouncedSync();
     } catch (e) {
       console.error("Delete note error:", e);
+      await refreshVaultData();
     }
   };
 
   // Manual Sync
   const handleManualSync = async () => {
-    setSyncing(true);
-    try {
-      const snap = await Api.syncNow();
-      await persistVaultFile(snap.contents);
-      await refreshVaultData();
-      showToast("Sincronización FTP completada", "📡");
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      showToast(`Error al sincronizar: ${msg}`, "❌");
-    } finally {
-      setSyncing(false);
+    if (syncTimeoutRef.current) {
+      clearTimeout(syncTimeoutRef.current);
     }
+    await performSync(false);
   };
 
   // Save Sync Configuration
@@ -727,9 +930,7 @@ export function App() {
           onSubmit={handleManualUnlock}
           className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-sm w-full space-y-4 shadow-2xl text-center animate-in fade-in duration-200"
         >
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center text-3xl mx-auto shadow-lg shadow-emerald-500/20">
-            {currentVault?.icon || "🛒"}
-          </div>
+          <img src="/icon.png" alt="FamilyNotes" className="w-14 h-14 rounded-2xl mx-auto shadow-lg shadow-emerald-500/20" />
           <div>
             <h2 className="text-lg font-bold text-white">
               {currentVault?.name || "FamilyNotes"}
@@ -823,6 +1024,8 @@ export function App() {
             onCreateList={handleCreateList}
             onUpdateList={handleUpdateList}
             onDeleteList={handleDeleteList}
+            onArchiveList={handleArchiveList}
+            onUnarchiveList={handleUnarchiveList}
             onAddItem={handleAddItem}
             onToggleItem={handleToggleItem}
             onDeleteItem={handleDeleteItem}

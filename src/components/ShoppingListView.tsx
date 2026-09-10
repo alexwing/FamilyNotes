@@ -8,6 +8,8 @@ import {
   ShoppingBag,
   BookOpen,
   Edit3,
+  Archive,
+  ArchiveRestore,
 } from "lucide-react";
 import { PurchaseHistoryItem, ShoppingList, ProductCatalogItem } from "../types";
 import { AmazonAutoComplete } from "./AmazonAutoComplete";
@@ -21,6 +23,8 @@ interface ShoppingListViewProps {
   onCreateList: (name: string, color: string, icon: string) => void;
   onUpdateList?: (listId: string, name: string, color: string, icon: string) => void;
   onDeleteList: (id: string) => void;
+  onArchiveList?: (id: string) => void;
+  onUnarchiveList?: (id: string) => void;
   onAddItem: (listId: string, text: string, emoji?: string, category?: string) => void;
   onToggleItem: (listId: string, itemId: string) => void;
   onDeleteItem: (listId: string, itemId: string) => void;
@@ -38,6 +42,8 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
   onCreateList,
   onUpdateList,
   onDeleteList,
+  onArchiveList,
+  onUnarchiveList,
   onAddItem,
   onToggleItem,
   onDeleteItem,
@@ -76,13 +82,21 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
     setIsConfirmingDelete(false);
   };
 
-  const currentList = lists.find((l) => l.id === selectedListId) || lists[0];
+  const [showArchived, setShowArchived] = useState(false);
+
+  const activeLists = lists.filter((l) => !l.archived);
+  const archivedLists = lists.filter((l) => !!l.archived);
+
+  const currentList =
+    lists.find((l) => l.id === selectedListId) || activeLists[0] || archivedLists[0] || lists[0];
+
+  const isCurrentArchived = !!currentList?.archived;
 
   const pendingItems = (currentList?.items || []).filter((i) => !i.checked);
   const completedItems = (currentList?.items || []).filter((i) => i.checked);
 
   const replenishmentAlerts = React.useMemo(() => {
-    if (!currentList) return [];
+    if (!currentList || isCurrentArchived) return [];
     return history.filter((h) => {
       // If it's already in pending items, don't recommend it
       const alreadyInList = currentList.items.some(
@@ -91,7 +105,7 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
       if (alreadyInList) return false;
       return h.count >= 5;
     });
-  }, [history, currentList]);
+  }, [history, currentList, isCurrentArchived]);
 
   const handleCreateListSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -118,10 +132,10 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
   }
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden min-h-0 max-w-5xl mx-auto w-full p-3 sm:p-6 space-y-3 sm:space-y-4">
+    <div className="flex-1 flex flex-col overflow-y-auto min-h-0 max-w-5xl mx-auto w-full p-3 sm:p-6 space-y-3 sm:space-y-4">
       {/* 1. LISTS SELECTOR (WRAPS IN MULTIPLE ROWS) */}
       <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 shrink-0">
-        {lists.map((list) => {
+        {activeLists.map((list) => {
           const isSelected = list.id === currentList?.id;
           const pendCount = list.items.filter((i) => !i.checked).length;
           return (
@@ -176,6 +190,22 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
           <span>Nueva lista</span>
         </button>
 
+        {archivedLists.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setShowArchived((prev) => !prev)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-xl text-xs font-semibold transition border cursor-pointer ${
+              showArchived || isCurrentArchived
+                ? "bg-slate-800 text-amber-300 border-amber-500/40"
+                : "bg-slate-900/60 text-slate-400 border-slate-800 hover:text-slate-300 hover:border-slate-700"
+            }`}
+            title="Desplegar listas archivadas"
+          >
+            <Archive size={13} />
+            <span>Archivadas ({archivedLists.length})</span>
+          </button>
+        )}
+
         {onOpenCatalogModal && (
           <button
             onClick={onOpenCatalogModal}
@@ -187,6 +217,73 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
           </button>
         )}
       </div>
+
+      {/* ARCHIVED LISTS DROPDOWN / UNFOLD ROW */}
+      {(showArchived || isCurrentArchived) && archivedLists.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5 p-2 bg-slate-900/60 border border-slate-800/80 rounded-2xl shrink-0">
+          <span className="text-[11px] text-amber-400/80 font-semibold px-1 flex items-center gap-1">
+            <Archive size={12} /> Listas archivadas:
+          </span>
+          {archivedLists.map((list) => {
+            const isSelected = list.id === currentList?.id;
+            return (
+              <button
+                key={list.id}
+                type="button"
+                onClick={() => onSelectList(list.id)}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-semibold border transition cursor-pointer ${
+                  isSelected
+                    ? "bg-amber-500/20 text-amber-200 border-amber-500/50 shadow-sm"
+                    : "bg-slate-950/70 text-slate-400 border-slate-800 hover:text-slate-300"
+                }`}
+              >
+                <span>📦</span>
+                <span>{list.name}</span>
+                <span className="text-[10px] opacity-70">({list.items.length})</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ARCHIVED LIST BANNER (READ-ONLY) */}
+      {isCurrentArchived && currentList && (
+        <div className="bg-gradient-to-r from-amber-500/10 via-slate-900 to-slate-900 border border-amber-500/30 rounded-2xl p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-300 flex items-center justify-center shrink-0">
+              <Archive size={16} />
+            </div>
+            <div>
+              <h4 className="text-xs font-bold text-amber-200">Lista archivada: {currentList.name}</h4>
+              <p className="text-[11px] text-slate-400">Esta lista no se puede editar. Puedes desarchivarla o eliminarla definitivamente.</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+            {onUnarchiveList && (
+              <button
+                type="button"
+                onClick={() => onUnarchiveList(currentList.id)}
+                className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3.5 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs transition cursor-pointer shadow-md shadow-emerald-500/20"
+              >
+                <ArchiveRestore size={14} />
+                <span>Desarchivar</span>
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                if (confirm(`¿Seguro que deseas eliminar definitivamente "${currentList.name}"? Se borrarán todos sus productos.`)) {
+                  onDeleteList(currentList.id);
+                }
+              }}
+              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3.5 py-1.5 bg-rose-500/20 hover:bg-rose-500 text-rose-300 hover:text-white border border-rose-500/40 font-bold rounded-xl text-xs transition cursor-pointer"
+            >
+              <Trash2 size={14} />
+              <span>Eliminar</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* CREATE LIST MODAL */}
       {isCreatingList && (
@@ -311,49 +408,63 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
               </div>
             </form>
 
-            {/* DELETE LIST SECTION INSIDE MODAL */}
-            {lists.length > 1 && (
-              <div className="pt-3 border-t border-slate-800/80">
-                {!isConfirmingDelete ? (
-                  <button
-                    type="button"
-                    onClick={() => setIsConfirmingDelete(true)}
-                    className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 text-xs font-bold transition cursor-pointer"
-                  >
-                    <Trash2 size={14} />
-                    <span>Eliminar esta lista</span>
-                  </button>
-                ) : (
-                  <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-2xl space-y-2">
-                    <p className="text-[11px] text-rose-300 font-medium">
-                      ¿Seguro que deseas eliminar "{editingList.name}"? Se borrarán sus {editingList.items.length} productos.
-                    </p>
-                    <div className="flex gap-2">
+            {/* DELETE OR ARCHIVE LIST SECTION INSIDE MODAL */}
+            <div className="pt-3 border-t border-slate-800/80">
+              {!isConfirmingDelete ? (
+                <button
+                  type="button"
+                  onClick={() => setIsConfirmingDelete(true)}
+                  className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 text-xs font-bold transition cursor-pointer"
+                >
+                  <Trash2 size={14} />
+                  <span>Eliminar o archivar esta lista</span>
+                </button>
+              ) : (
+                <div className="p-3 bg-slate-950/80 border border-slate-800 rounded-2xl space-y-2.5">
+                  <p className="text-[11px] text-slate-300 font-medium">
+                    ¿Qué deseas hacer con la lista "{editingList.name}"?
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    {onArchiveList && (
                       <button
                         type="button"
-                        onClick={() => setIsConfirmingDelete(false)}
-                        className="flex-1 py-1.5 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold"
+                        onClick={() => {
+                          onArchiveList(editingList.id);
+                          setEditingList(null);
+                        }}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-xs font-bold transition cursor-pointer"
                       >
-                        Cancelar
+                        <Archive size={14} />
+                        <span>Archivar lista</span>
                       </button>
+                    )}
+                    {lists.length > 1 && (
                       <button
                         type="button"
                         onClick={handleDeleteConfirmed}
-                        className="flex-1 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition"
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition cursor-pointer"
                       >
-                        Sí, eliminar
+                        <Trash2 size={14} />
+                        <span>Eliminar</span>
                       </button>
-                    </div>
+                    )}
                   </div>
-                )}
-              </div>
-            )}
+                  <button
+                    type="button"
+                    onClick={() => setIsConfirmingDelete(false)}
+                    className="w-full py-1 text-center text-[11px] text-slate-400 hover:text-slate-200"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
 
       {/* 2. REPLENISHMENT SMART ALERTS (AMAZON-STYLE) */}
-      {replenishmentAlerts.length > 0 && (
+      {!isCurrentArchived && replenishmentAlerts.length > 0 && (
         <div className="flex overflow-x-auto snap-x snap-mandatory gap-3 pb-2 -mx-1 px-1 hide-scrollbar shrink-0">
           {replenishmentAlerts.map((alert, idx) => (
             <div key={idx} className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/25 rounded-2xl p-3.5 flex items-center justify-between gap-3 min-w-[280px] snap-center shrink-0">
@@ -388,20 +499,22 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
       )}
 
       {/* 3. SEARCH & ADD BAR WITH LIVE AUTOCOMPLETE */}
-      <div className="shrink-0">
-        <AmazonAutoComplete
-          history={history}
-          customCatalog={customCatalog}
-          onOpenCatalogModal={onOpenCatalogModal}
-          onAddItem={(text, emoji, category) =>
-            onAddItem(currentList.id, text, emoji, category)
-          }
-          placeholder={`Añadir producto a ${currentList.name}...`}
-        />
-      </div>
+      {!isCurrentArchived && (
+        <div className="shrink-0">
+          <AmazonAutoComplete
+            history={history}
+            customCatalog={customCatalog}
+            onOpenCatalogModal={onOpenCatalogModal}
+            onAddItem={(text, emoji, category) =>
+              onAddItem(currentList.id, text, emoji, category)
+            }
+            placeholder={`Añadir producto a ${currentList.name}...`}
+          />
+        </div>
+      )}
 
       {/* 4. SHOPPING LIST CONTENT (PENDING & COMPLETED) */}
-      <div className="flex-1 overflow-y-auto space-y-6 pr-1">
+        <div className="space-y-6 pr-1">
         {/* PENDING ITEMS SECTION */}
         <div>
           <div className="flex items-center justify-between mb-2 px-1">
@@ -411,7 +524,7 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
                 {pendingItems.length}
               </span>
             </h3>
-            <span className="text-[11px] text-slate-500">Toca el checkbox para tachar</span>
+            {!isCurrentArchived && <span className="text-[11px] text-slate-500">Toca el checkbox para tachar</span>}
           </div>
 
           {pendingItems.length === 0 ? (
@@ -419,6 +532,8 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
               <p className="text-xs text-slate-400">
                 {completedItems.length > 0
                   ? "¡Has comprado todos los artículos pendientes! 🎉"
+                  : isCurrentArchived
+                  ? "Esta lista archivada no tiene productos pendientes."
                   : "No hay productos en esta lista. Escribe arriba para añadir el primero."}
               </p>
             </div>
@@ -430,16 +545,22 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
                   className="item-transition bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-xl p-3 flex items-center justify-between gap-3 group shadow-sm"
                 >
                   <div
-                    onClick={() => onToggleItem(currentList.id, item.id)}
-                    className="flex items-center gap-3 flex-1 cursor-pointer"
+                    onClick={() => {
+                      if (!isCurrentArchived) {
+                        onToggleItem(currentList.id, item.id);
+                      }
+                    }}
+                    className={`flex items-center gap-3 flex-1 ${isCurrentArchived ? "cursor-default" : "cursor-pointer"}`}
                   >
                     {/* Checkbox button */}
-                    <button
-                      type="button"
-                      className="w-5 h-5 rounded-lg border-2 border-slate-700 group-hover:border-emerald-500 flex items-center justify-center transition shrink-0"
-                    >
-                      <span className="opacity-0 group-hover:opacity-30 text-emerald-400 text-xs">✓</span>
-                    </button>
+                    {!isCurrentArchived && (
+                      <button
+                        type="button"
+                        className="w-5 h-5 rounded-lg border-2 border-slate-700 group-hover:border-emerald-500 flex items-center justify-center transition shrink-0"
+                      >
+                        <span className="opacity-0 group-hover:opacity-30 text-emerald-400 text-xs">✓</span>
+                      </button>
+                    )}
 
                     <div className="flex items-center gap-2.5">
                       <span className="text-xl">{item.emoji || "🛒"}</span>
@@ -460,13 +581,15 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
                     </div>
                   </div>
 
-                  <button
-                    onClick={() => onDeleteItem(currentList.id, item.id)}
-                    title="Eliminar producto"
-                    className="p-1.5 rounded-lg text-slate-600 hover:text-rose-400 hover:bg-slate-800 transition"
-                  >
-                    <Trash2 size={14} />
-                  </button>
+                  {!isCurrentArchived && (
+                    <button
+                      onClick={() => onDeleteItem(currentList.id, item.id)}
+                      title="Eliminar producto"
+                      className="p-1.5 rounded-lg text-slate-600 hover:text-rose-400 hover:bg-slate-800 transition"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
@@ -483,12 +606,14 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
                   {completedItems.length}
                 </span>
               </h3>
-              <button
-                onClick={() => onClearCompleted(currentList.id)}
-                className="text-[11px] text-rose-400/80 hover:text-rose-400 font-semibold transition"
-              >
-                Vaciar comprados
-              </button>
+              {!isCurrentArchived && (
+                <button
+                  onClick={() => onClearCompleted(currentList.id)}
+                  className="text-[11px] text-rose-400/80 hover:text-rose-400 font-semibold transition"
+                >
+                  Vaciar comprados
+                </button>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -498,8 +623,12 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
                   className="item-transition bg-slate-900/40 border border-slate-800/40 rounded-xl p-2.5 flex items-center justify-between gap-3 opacity-60 hover:opacity-90 transition"
                 >
                   <div
-                    onClick={() => onToggleItem(currentList.id, item.id)}
-                    className="flex items-center gap-3 flex-1 cursor-pointer"
+                    onClick={() => {
+                      if (!isCurrentArchived) {
+                        onToggleItem(currentList.id, item.id);
+                      }
+                    }}
+                    className={`flex items-center gap-3 flex-1 ${isCurrentArchived ? "cursor-default" : "cursor-pointer"}`}
                   >
                     {/* Checked button */}
                     <button

@@ -21,7 +21,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
   const sortedHistory = [...history].sort((a, b) => b.count - a.count);
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden min-h-0 max-w-5xl mx-auto w-full p-4 sm:p-6 space-y-5">
+    <div className="flex-1 flex flex-col overflow-y-auto min-h-0 max-w-5xl mx-auto w-full p-4 sm:p-6 space-y-5">
       {/* Header Banner */}
       <div className="bg-gradient-to-r from-slate-900 to-slate-900/60 border border-slate-800 rounded-2xl p-4 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-3">

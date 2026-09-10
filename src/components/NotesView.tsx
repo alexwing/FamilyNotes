@@ -16,6 +16,8 @@ export const NotesView: React.FC<NotesViewProps> = ({
   const [searchQuery, setSearchQuery] = useState("");
   const [editingNote, setEditingNote] = useState<Note | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [pendingDeleteNote, setPendingDeleteNote] = useState<Note | null>(null);
+  const [lastDeletedNote, setLastDeletedNote] = useState<Note | null>(null);
 
   const filteredNotes = [...notes]
     .filter(
@@ -57,8 +59,22 @@ export const NotesView: React.FC<NotesViewProps> = ({
     setEditingNote(null);
   };
 
+  const handleDeleteConfirmed = () => {
+    if (!pendingDeleteNote) return;
+    const noteToDelete = pendingDeleteNote;
+    onDeleteNote(noteToDelete.id);
+    setLastDeletedNote(noteToDelete);
+    setPendingDeleteNote(null);
+  };
+
+  const handleRestoreDeletedNote = () => {
+    if (!lastDeletedNote) return;
+    onSaveNote(lastDeletedNote);
+    setLastDeletedNote(null);
+  };
+
   return (
-    <div className="flex-1 flex flex-col overflow-hidden min-h-0 max-w-5xl mx-auto w-full p-4 sm:p-6 space-y-4">
+    <div className="flex-1 flex flex-col overflow-y-auto min-h-0 max-w-5xl mx-auto w-full p-4 sm:p-6 space-y-4">
       {/* Top Search & Add Bar */}
       <div className="flex items-center gap-3 shrink-0">
         <div className="flex-1 flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-2xl px-3 py-2 text-xs">
@@ -82,7 +98,7 @@ export const NotesView: React.FC<NotesViewProps> = ({
       </div>
 
       {/* NOTES GRID */}
-      <div className="flex-1 overflow-y-auto">
+      <div>
         {filteredNotes.length === 0 ? (
           <div className="text-center py-12 text-slate-500">
             <p className="text-sm">No se encontraron notas familiares.</p>
@@ -120,7 +136,7 @@ export const NotesView: React.FC<NotesViewProps> = ({
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        onDeleteNote(note.id);
+                        setPendingDeleteNote(note);
                       }}
                       className="p-1 text-slate-400 hover:text-rose-400"
                       title="Eliminar"
@@ -135,12 +151,85 @@ export const NotesView: React.FC<NotesViewProps> = ({
         )}
       </div>
 
+      {lastDeletedNote && (
+        <div className="fixed bottom-4 right-4 z-50 max-w-sm w-[calc(100%-2rem)] rounded-2xl border border-amber-500/30 bg-slate-900/95 p-3 shadow-2xl shadow-amber-950/30 backdrop-blur-sm">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-amber-400">
+                Nota eliminada
+              </p>
+              <p className="mt-1 text-xs text-slate-300 line-clamp-2">
+                {lastDeletedNote.title || "Sin título"}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setLastDeletedNote(null)}
+              className="text-[10px] text-slate-400 hover:text-white"
+            >
+              Cerrar
+            </button>
+          </div>
+          <div className="mt-3 flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setLastDeletedNote(null)}
+              className="px-3 py-1.5 rounded-xl text-[11px] text-slate-300 hover:text-white"
+            >
+              Ignorar
+            </button>
+            <button
+              type="button"
+              onClick={handleRestoreDeletedNote}
+              className="px-3 py-1.5 rounded-xl bg-amber-500 text-slate-950 font-bold text-[11px] hover:bg-amber-400"
+            >
+              Recuperar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {pendingDeleteNote && (
+        <div className="fixed inset-0 bg-slate-950 md:bg-black/60 md:backdrop-blur-sm z-50 flex items-center justify-center md:p-4">
+          <div className="bg-slate-900 md:border border-slate-800 md:rounded-2xl p-5 max-w-md w-[92vw] space-y-4 md:shadow-2xl">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-rose-400">
+                Confirmar eliminación
+              </p>
+              <h3 className="mt-2 text-sm font-bold text-white">
+                ¿Eliminar "{pendingDeleteNote.title || "esta nota"}"?
+              </h3>
+              <p className="mt-2 text-xs text-slate-400">
+                Podrás recuperarla desde la notificación de eliminación antes de salir de la pantalla.
+              </p>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setPendingDeleteNote(null)}
+                className="px-4 py-2 rounded-xl text-xs text-slate-400 hover:text-white"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteConfirmed}
+                className="px-4 py-2 bg-rose-500 hover:bg-rose-400 text-white font-bold rounded-xl text-xs transition"
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* EDIT / CREATE MODAL */}
       {isModalOpen && editingNote && (
         <div className="fixed inset-0 bg-slate-950 md:bg-black/60 md:backdrop-blur-sm z-50 flex items-center justify-center md:p-4">
           <form
             onSubmit={handleSubmit}
-            className="bg-slate-900 md:border border-slate-800 md:rounded-2xl p-5 max-w-lg w-full h-full md:h-auto flex flex-col space-y-4 md:shadow-2xl"
+            className="bg-slate-900 md:border border-slate-800 md:rounded-2xl p-5 w-[95vw] max-w-3xl md:max-w-4xl lg:max-w-5xl h-[92vh] md:h-[85vh] flex flex-col gap-3 md:shadow-2xl overflow-hidden"
           >
             <div className="flex items-center justify-between shrink-0">
               <h3 className="text-sm font-bold text-white">
@@ -181,21 +270,23 @@ export const NotesView: React.FC<NotesViewProps> = ({
               />
             </div>
 
-            <div className="flex-1 flex flex-col min-h-0">
-              <label className="text-[11px] text-slate-400 font-bold block mb-1">
+            <div className="flex-1 flex flex-col min-h-0 pb-1">
+              <label className="text-[11px] text-slate-400 font-bold block mb-2">
                 Contenido
               </label>
-              <textarea
-                placeholder="Escribe aquí las ideas, recetas o datos para la familia..."
-                value={editingNote.content}
-                onChange={(e) =>
-                  setEditingNote({ ...editingNote, content: e.target.value })
-                }
-                className="flex-1 w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white outline-none focus:border-emerald-500 font-mono resize-none"
-              />
+              <div className="flex-1 rounded-xl border border-slate-800 bg-slate-950 p-2 mb-2 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/30 transition-all">
+                <textarea
+                  placeholder="Escribe aquí las ideas, recetas o datos para la familia..."
+                  value={editingNote.content}
+                  onChange={(e) =>
+                    setEditingNote({ ...editingNote, content: e.target.value })
+                  }
+                  className="flex-1 w-full min-h-[260px] bg-transparent text-xs text-white font-mono resize-none border-0 outline-none p-1"
+                />
+              </div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-2 shrink-0">
+            <div className="flex justify-end gap-2 pt-3 shrink-0 border-t border-slate-800/80 bg-slate-900 mt-1 pb-1">
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
