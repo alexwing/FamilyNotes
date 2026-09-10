@@ -28,7 +28,7 @@ export const AmazonAutoComplete: React.FC<AmazonAutoCompleteProps> = ({
   customCatalog = [],
   onAddItem,
   onOpenCatalogModal,
-  placeholder = "Escribe un producto...",
+  placeholder = "",
 }) => {
   const { t } = useTranslation();
   const [query, setQuery] = useState("");
@@ -157,7 +157,7 @@ export const AmazonAutoComplete: React.FC<AmazonAutoCompleteProps> = ({
               setShowCategoryMenu(false);
               setIsOpen(false);
             }}
-            title="Icono. Haz clic para cambiarlo."
+            title={t("catalog.emojiLabel")}
             className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/90 dark:hover:bg-slate-700 flex items-center justify-center text-lg transition-transform active:scale-95 cursor-pointer shrink-0"
           >
             <span>{activeEmoji}</span>
@@ -230,7 +230,7 @@ export const AmazonAutoComplete: React.FC<AmazonAutoCompleteProps> = ({
           {showCategoryMenu && (
             <div className="absolute right-0 top-full mt-2 z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-1.5 shadow-2xl w-48 sm:w-56 max-h-60 overflow-y-auto space-y-0.5 animate-in fade-in zoom-in-95 duration-100">
               <div className="px-2 py-1 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider border-b border-slate-100 dark:border-slate-800 mb-1">
-                {t("common.category") || "Categoría"}
+                {t("common.category")}
               </div>
               {CATEGORIES.map((cat) => (
                 <button

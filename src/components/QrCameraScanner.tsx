@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import jsQR from "jsqr";
 import { decodeQrFromImageFile } from "../utils/qrDecoder";
+import { useTranslation } from "../context/LanguageContext";
 
 interface QrCameraScannerProps {
   isOpen: boolean;
@@ -21,8 +22,10 @@ export const QrCameraScanner: React.FC<QrCameraScannerProps> = ({
   isOpen,
   onScan,
   onClose,
-  title = "Escanear Código QR",
+  title,
 }) => {
+  const { t } = useTranslation();
+  const displayTitle = title || t("scanner.title");
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -163,9 +166,7 @@ export const QrCameraScanner: React.FC<QrCameraScannerProps> = ({
 
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         setIsLoading(false);
-        setErrorMessage(
-          "El acceso a la cámara no está soportado en este entorno. Puedes subir una foto del código QR con el botón inferior."
-        );
+        setErrorMessage(t("scanner.notSupported"));
         return;
       }
 
@@ -241,16 +242,12 @@ export const QrCameraScanner: React.FC<QrCameraScannerProps> = ({
         const name = (err as Error)?.name || "";
         const msg = (err as Error)?.message || String(err);
         if (name === "NotAllowedError" || name === "PermissionDeniedError") {
-          setErrorMessage(
-            "Permiso de cámara denegado. Concede permiso a la aplicación en los ajustes de privacidad de tu sistema o sube una imagen con el QR."
-          );
+          setErrorMessage(t("scanner.permissionDenied"));
         } else if (name === "NotFoundError" || name === "DevicesNotFoundError") {
-          setErrorMessage(
-            "No se detectó ninguna cámara o webcam disponible. Puedes subir una imagen con la foto del QR."
-          );
+          setErrorMessage(t("scanner.noCameraFound"));
         } else {
           setErrorMessage(
-            `No se pudo iniciar la cámara (${name || "Error"}: ${msg || "en uso"}). Comprueba que no esté en uso por otra app o sube una foto del QR.`
+            t("scanner.cameraFailed", { error: `${name || "Error"}: ${msg || "in use"}` })
           );
         }
       }
@@ -279,9 +276,8 @@ export const QrCameraScanner: React.FC<QrCameraScannerProps> = ({
       const decodedText = await decodeQrFromImageFile(file);
       stopCamera();
       onScanRef.current(decodedText);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setErrorMessage(msg);
+    } catch {
+      setErrorMessage(t("scanner.noQrFound"));
     } finally {
       setIsProcessingFile(false);
       if (fileInputRef.current) {
@@ -315,9 +311,9 @@ export const QrCameraScanner: React.FC<QrCameraScannerProps> = ({
               <Camera size={18} />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-white">{title}</h3>
+              <h3 className="text-sm font-bold text-white">{displayTitle}</h3>
               <p className="text-[11px] text-slate-400">
-                Apunta al código QR generado en el otro equipo
+                {t("settings.family.qrDesc")}
               </p>
             </div>
           </div>
@@ -351,7 +347,7 @@ export const QrCameraScanner: React.FC<QrCameraScannerProps> = ({
           {isLoading && !errorMessage && (
             <div className="absolute inset-0 bg-slate-950/80 flex flex-col items-center justify-center gap-3 z-20">
               <Loader2 size={32} className="text-purple-400 animate-spin" />
-              <p className="text-xs text-slate-300 font-medium">Iniciando cámara...</p>
+              <p className="text-xs text-slate-300 font-medium">{t("scanner.starting")}</p>
             </div>
           )}
 
@@ -359,7 +355,7 @@ export const QrCameraScanner: React.FC<QrCameraScannerProps> = ({
           {isProcessingFile && (
             <div className="absolute inset-0 bg-slate-950/85 flex flex-col items-center justify-center gap-3 z-30">
               <Loader2 size={32} className="text-emerald-400 animate-spin" />
-              <p className="text-xs text-white font-medium">Analizando imagen y decodificando QR...</p>
+              <p className="text-xs text-white font-medium">{t("scanner.analyzing")}</p>
             </div>
           )}
 
@@ -374,16 +370,16 @@ export const QrCameraScanner: React.FC<QrCameraScannerProps> = ({
                 <button
                   type="button"
                   onClick={() => void startCamera()}
-                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl transition"
+                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl transition cursor-pointer"
                 >
-                  Reintentar
+                  {t("scanner.retry")}
                 </button>
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold rounded-xl transition"
+                  className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold rounded-xl transition cursor-pointer"
                 >
-                  Subir imagen
+                  {t("scanner.uploadImage")}
                 </button>
               </div>
             </div>
@@ -411,8 +407,8 @@ export const QrCameraScanner: React.FC<QrCameraScannerProps> = ({
             <button
               type="button"
               onClick={handleSwitchCamera}
-              title="Cambiar cámara"
-              className="absolute top-3 right-3 z-20 w-9 h-9 rounded-xl bg-slate-900/80 backdrop-blur-md border border-slate-700 text-white flex items-center justify-center hover:bg-slate-800 transition active:scale-95"
+              title={t("scanner.switchCamera")}
+              className="absolute top-3 right-3 z-20 w-9 h-9 rounded-xl bg-slate-900/80 backdrop-blur-md border border-slate-700 text-white flex items-center justify-center hover:bg-slate-800 transition active:scale-95 cursor-pointer"
             >
               <RefreshCw size={16} />
             </button>
@@ -434,10 +430,10 @@ export const QrCameraScanner: React.FC<QrCameraScannerProps> = ({
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={isProcessingFile}
-            className="w-full sm:w-auto px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition"
+            className="w-full sm:w-auto px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition cursor-pointer"
           >
             <ImageIcon size={15} className="text-purple-400" />
-            <span>Subir imagen / foto del QR</span>
+            <span>{t("scanner.uploadImage")}</span>
           </button>
 
           <button
@@ -446,9 +442,9 @@ export const QrCameraScanner: React.FC<QrCameraScannerProps> = ({
               stopCamera();
               onClose();
             }}
-            className="w-full sm:w-auto px-4 py-2 text-xs text-slate-400 hover:text-white transition"
+            className="w-full sm:w-auto px-4 py-2 text-xs text-slate-400 hover:text-white transition cursor-pointer"
           >
-            Cancelar
+            {t("common.cancel")}
           </button>
         </div>
       </div>

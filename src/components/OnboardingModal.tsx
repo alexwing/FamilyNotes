@@ -16,6 +16,7 @@ import {
 import { SyncConfig } from "../types";
 import { QrCameraScanner } from "./QrCameraScanner";
 import { decodeQrFromImageFile } from "../utils/qrDecoder";
+import { useTranslation } from "../context/LanguageContext";
 
 interface OnboardingModalProps {
   onComplete: (password: string, deviceName: string) => void;
@@ -26,9 +27,10 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   onComplete,
   onLinkViaFtp,
 }) => {
+  const { t } = useTranslation();
   const [mode, setMode] = useState<"create" | "link_qr">("create");
   const [step, setStep] = useState<1 | 2>(1);
-  const [deviceName, setDeviceName] = useState("Mamá");
+  const [deviceName, setDeviceName] = useState("");
   const [password, setPassword] = useState("");
   const [repeatPassword, setRepeatPassword] = useState("");
   const [error, setError] = useState("");
@@ -37,7 +39,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   const [qrInput, setQrInput] = useState("");
   const [parsedConfig, setParsedConfig] = useState<SyncConfig | null>(null);
   const [linkPassword, setLinkPassword] = useState("");
-  const [linkingDeviceName, setLinkingDeviceName] = useState("Nuevo Dispositivo");
+  const [linkingDeviceName, setLinkingDeviceName] = useState("");
   const [isLinking, setIsLinking] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
@@ -49,7 +51,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   const handleStep1 = (e: React.FormEvent) => {
     e.preventDefault();
     if (!deviceName.trim()) {
-      setError("Por favor escribe tu nombre o el de este dispositivo");
+      setError(t("onboarding.nameRequired"));
       return;
     }
     setError("");
@@ -59,15 +61,15 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   const handleFinishCreate = (e: React.FormEvent) => {
     e.preventDefault();
     if (!password) {
-      setError("Introduce una contraseña maestra");
+      setError(t("onboarding.passRequired"));
       return;
     }
     if (password !== repeatPassword) {
-      setError("Las contraseñas no coinciden");
+      setError(t("onboarding.passMismatch"));
       return;
     }
     if (password.length < 4) {
-      setError("La contraseña debe tener al menos 4 caracteres");
+      setError(t("onboarding.passMinLength"));
       return;
     }
 
@@ -105,10 +107,10 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
         };
         setParsedConfig(config);
       } else {
-        setError("El código QR no contiene datos válidos de servidor FTP");
+        setError(t("onboarding.invalidQr"));
       }
     } catch {
-      setError("Formato de enlace no reconocido. Debe comenzar con 'fnlink://' o ser JSON");
+      setError(t("onboarding.invalidLinkFormat"));
     }
   };
 
@@ -128,9 +130,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
     try {
       const decodedText = await decodeQrFromImageFile(file);
       onQrDecoded(decodedText);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setError(msg);
+    } catch {
+      setError(t("scanner.noQrFound"));
     } finally {
       setIsUploadingImage(false);
       if (imageInputRef.current) {
@@ -144,18 +145,18 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
       const clip = await navigator.clipboard.readText();
       onQrDecoded(clip);
     } catch {
-      setError("No se pudo leer el portapapeles. Pega el texto manualmente.");
+      setError(t("onboarding.clipboardError"));
     }
   };
 
   const handleFinishLink = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!parsedConfig) {
-      setError("Primero debes ingresar o escanear el código QR");
+      setError(t("onboarding.invalidQr"));
       return;
     }
     if (!linkPassword) {
-      setError("Escribe la contraseña maestra para descifrar la bóveda");
+      setError(t("onboarding.passRequired"));
       return;
     }
 
@@ -166,11 +167,11 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       if (msg.includes("decryption_failed") || msg.includes("invalid_key")) {
-        setError("Contraseña maestra incorrecta para este vault.");
+        setError(t("onboarding.passIncorrect"));
       } else if (msg.includes("vault_file_not_found")) {
-        setError("No se encontró el fichero vault en el FTP. Comprueba el servidor.");
+        setError(t("onboarding.vaultFileNotFound"));
       } else {
-        setError(`Error al vincular: ${msg}`);
+        setError(t("onboarding.linkError", { msg }));
       }
     } finally {
       setIsLinking(false);
@@ -203,27 +204,27 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
 
                 <div>
                   <h2 className="text-xl font-bold text-white tracking-tight">
-                    ¡Bienvenido a FamilyNotes!
+                    {t("onboarding.welcomeTitle")}
                   </h2>
                   <p className="text-xs text-slate-400 mt-1">
-                    Listas de la compra y notas familiares cifradas y sincronizadas.
+                    {t("onboarding.welcomeSubtitle")}
                   </p>
                 </div>
 
                 <div className="text-left space-y-1.5 pt-2">
                   <label className="text-[11px] text-slate-300 font-bold block">
-                    ¿Quién usará este dispositivo?
+                    {t("onboarding.whoUsesDevice")}
                   </label>
                   <input
                     type="text"
                     autoFocus
-                    placeholder="Ej: Mamá, Papá, Lucas, PC Salón..."
+                    placeholder={t("onboarding.devicePlaceholder")}
                     value={deviceName}
                     onChange={(e) => setDeviceName(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-emerald-500 transition"
                   />
                   <span className="text-[10px] text-slate-500">
-                    Aparecerá en los productos que marques como comprados.
+                    {t("onboarding.deviceHint")}
                   </span>
                 </div>
 
@@ -233,7 +234,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                   type="submit"
                   className="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-sm transition shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2"
                 >
-                  <span>Crear nueva bóveda</span>
+                  <span>{t("onboarding.createNew")}</span>
                   <ArrowRight size={16} />
                 </button>
 
@@ -248,7 +249,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                     className="text-xs font-bold text-purple-400 hover:text-purple-300 flex items-center justify-center gap-1.5 mx-auto transition"
                   >
                     <QrCode size={14} />
-                    <span>¿Ya tienes FamilyNotes en otro equipo? Vincular por QR</span>
+                    <span>{t("onboarding.hasAnotherDevice")}</span>
                   </button>
                 </div>
               </form>
@@ -259,31 +260,31 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                     <ShieldCheck size={26} />
                   </div>
                   <h2 className="text-lg font-bold text-white tracking-tight">
-                    Crea tu Contraseña Maestra
+                    {t("onboarding.createPassTitle")}
                   </h2>
                   <p className="text-xs text-slate-400">
-                    Esta clave cifra tu bóveda con <strong>Argon2id + XChaCha20</strong>.
+                    {t("onboarding.createPassSubtitle")}
                   </p>
                 </div>
 
                 <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-start gap-2.5">
                   <Sparkles size={16} className="text-emerald-400 shrink-0 mt-0.5" />
                   <p className="text-[11px] text-slate-300">
-                    Esta contraseña <strong>se guardará en este equipo</strong>. No te la volverá a pedir cada vez que abras la app.
+                    {t("onboarding.passSavedNotice")}
                   </p>
                 </div>
 
                 <div className="space-y-3 pt-1">
                   <div>
                     <label className="text-[10px] text-slate-400 font-bold block mb-1">
-                      CONTRASEÑA MAESTRA
+                      {t("vaultManager.masterPass").toUpperCase()}
                     </label>
                     <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 focus-within:border-emerald-500">
                       <Key size={14} className="text-slate-400" />
                       <input
                         type="password"
                         autoFocus
-                        placeholder="Escribe tu contraseña..."
+                        placeholder={t("vaultManager.masterPassPlaceholder")}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         className="w-full bg-transparent text-xs text-white font-mono outline-none"
@@ -293,13 +294,13 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
 
                   <div>
                     <label className="text-[10px] text-slate-400 font-bold block mb-1">
-                      REPETIR CONTRASEÑA
+                      {t("vaultManager.repeatPass").toUpperCase()}
                     </label>
                     <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 focus-within:border-emerald-500">
                       <Key size={14} className="text-slate-400" />
                       <input
                         type="password"
-                        placeholder="Repite la contraseña..."
+                        placeholder={t("vaultManager.repeatPassPlaceholder")}
                         value={repeatPassword}
                         onChange={(e) => setRepeatPassword(e.target.value)}
                         className="w-full bg-transparent text-xs text-white font-mono outline-none"
@@ -316,13 +317,13 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                     onClick={() => setStep(1)}
                     className="px-4 py-2.5 rounded-xl text-xs text-slate-400 hover:text-white"
                   >
-                    Atrás
+                    {t("common.back")}
                   </button>
                   <button
                     type="submit"
                     className="flex-1 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs transition shadow-lg shadow-emerald-500/20"
                   >
-                    Comenzar a usar FamilyNotes
+                    {t("onboarding.startUsingBtn")}
                   </button>
                 </div>
               </form>
@@ -338,17 +339,17 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                 <QrCode size={26} />
               </div>
               <h2 className="text-lg font-bold text-white tracking-tight">
-                Vincular Dispositivo con QR
+                {t("onboarding.linkQrTitle")}
               </h2>
               <p className="text-xs text-slate-400">
-                Escanea la cámara, sube una foto o pega el código generado en el otro equipo para descargar la bóveda.
+                {t("onboarding.linkQrSubtitle")}
               </p>
             </div>
 
             {/* Quick Actions: Scan Camera & Upload Image */}
             <div className="space-y-1.5 pt-1">
               <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">
-                Método de vinculación
+                {t("onboarding.linkMethodLabel")}
               </label>
 
               <div className="grid grid-cols-2 gap-2">
@@ -361,8 +362,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                   className="p-3 bg-purple-600 hover:bg-purple-500 active:scale-95 text-white rounded-2xl flex flex-col items-center justify-center gap-1.5 transition shadow-lg shadow-purple-600/20 group cursor-pointer"
                 >
                   <Camera size={20} className="group-hover:scale-110 transition text-purple-100" />
-                  <span className="text-xs font-bold">Escanear Cámara</span>
-                  <span className="text-[10px] text-purple-200/80">Webcam o Móvil</span>
+                  <span className="text-xs font-bold">{t("onboarding.scanCameraBtn")}</span>
+                  <span className="text-[10px] text-purple-200/80">{t("onboarding.webcamOrMobile")}</span>
                 </button>
 
                 <button
@@ -379,8 +380,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                   ) : (
                     <ImageIcon size={20} className="group-hover:scale-110 transition text-purple-400" />
                   )}
-                  <span className="text-xs font-bold">Subir Imagen / Foto</span>
-                  <span className="text-[10px] text-slate-400">Captura o Galería</span>
+                  <span className="text-xs font-bold">{t("onboarding.uploadImageBtn")}</span>
+                  <span className="text-[10px] text-slate-400">{t("onboarding.captureOrGallery")}</span>
                 </button>
               </div>
 
@@ -397,7 +398,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
             {/* Separator */}
             <div className="flex items-center gap-2 text-[10px] text-slate-500 font-bold uppercase tracking-wider py-0.5">
               <div className="flex-1 h-px bg-slate-800" />
-              <span>o pega el enlace manualmente</span>
+              <span>{t("onboarding.orManualInput")}</span>
               <div className="flex-1 h-px bg-slate-800" />
             </div>
 
@@ -405,12 +406,12 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
               {/* QR Input */}
               <div>
                 <label className="text-[10px] text-slate-400 font-bold block mb-1">
-                  CÓDIGO DE VINCULACIÓN O ENLACE (fnlink://...)
+                  {t("onboarding.qrCodeOrLink")}
                 </label>
                 <div className="flex gap-2">
                   <input
                     type="text"
-                    placeholder="Pega aquí el enlace de vinculación..."
+                    placeholder={t("onboarding.pasteLinkPlaceholder")}
                     value={qrInput}
                     onChange={(e) => {
                       setScanSuccessBanner(false);
@@ -421,11 +422,11 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                   <button
                     type="button"
                     onClick={handlePasteClipboard}
-                    title="Pegar del portapapeles"
+                    title={t("onboarding.pasteClipboardBtn")}
                     className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-purple-400 font-bold rounded-xl text-xs flex items-center gap-1 shrink-0 cursor-pointer"
                   >
                     <ClipboardPaste size={14} />
-                    <span>Pegar</span>
+                    <span>{t("common.paste")}</span>
                   </button>
                 </div>
               </div>
@@ -434,7 +435,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
               {scanSuccessBanner && parsedConfig && (
                 <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/30 rounded-xl flex items-center gap-2 text-emerald-400 text-xs">
                   <CheckCircle2 size={16} className="shrink-0" />
-                  <span className="font-semibold">¡Código QR reconocido con éxito!</span>
+                  <span className="font-semibold">{t("onboarding.scanSuccess")}</span>
                 </div>
               )}
 
@@ -443,13 +444,13 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                 <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-xs space-y-1">
                   <div className="flex items-center gap-1.5 text-emerald-400 font-bold text-[11px]">
                     <Server size={13} />
-                    <span>Servidor FTP reconocido:</span>
+                    <span>{t("onboarding.ftpRecognized")}</span>
                   </div>
                   <div className="text-[11px] text-slate-300 font-mono">
                     Host: {parsedConfig.host}:{parsedConfig.port}
                   </div>
                   <div className="text-[11px] text-slate-300 font-mono">
-                    Bóveda: {parsedConfig.remoteDir}/{parsedConfig.remoteFile}
+                    {parsedConfig.remoteDir}/{parsedConfig.remoteFile}
                   </div>
                 </div>
               )}
@@ -457,13 +458,13 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
               {/* Device name */}
               <div>
                 <label className="text-[10px] text-slate-400 font-bold block mb-1">
-                  TU NOMBRE EN ESTE EQUIPO
+                  {t("onboarding.linkDeviceLabel").toUpperCase()}
                 </label>
                 <input
                   type="text"
                   value={linkingDeviceName}
                   onChange={(e) => setLinkingDeviceName(e.target.value)}
-                  placeholder="Ej: Papá, Teléfono Lucas, PC Trabajo..."
+                  placeholder={t("onboarding.linkDevicePlaceholder")}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-purple-500"
                 />
               </div>
@@ -471,21 +472,21 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
               {/* Master password to decrypt */}
               <div>
                 <label className="text-[10px] text-slate-400 font-bold block mb-1">
-                  CONTRASEÑA MAESTRA DE LA BÓVEDA
+                  {t("onboarding.linkPassLabel").toUpperCase()}
                 </label>
                 <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 focus-within:border-purple-500">
                   <Key size={14} className="text-slate-400" />
                   <input
                     ref={linkPasswordInputRef}
                     type="password"
-                    placeholder="Introduce la contraseña para descifrar..."
+                    placeholder={t("onboarding.linkPassPlaceholder")}
                     value={linkPassword}
                     onChange={(e) => setLinkPassword(e.target.value)}
                     className="w-full bg-transparent text-xs text-white font-mono outline-none"
                   />
                 </div>
                 <span className="text-[10px] text-slate-500 mt-1 block">
-                  Se guardará en este equipo para que no la tengas que volver a escribir.
+                  {t("onboarding.passSavedLocalNotice")}
                 </span>
               </div>
             </div>
@@ -506,14 +507,14 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                 }}
                 className="px-4 py-2.5 rounded-xl text-xs text-slate-400 hover:text-white"
               >
-                Volver
+                {t("common.back")}
               </button>
               <button
                 type="submit"
                 disabled={isLinking || !parsedConfig || !linkPassword}
                 className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl text-xs transition shadow-lg shadow-purple-500/20 flex items-center justify-center gap-2 disabled:opacity-50"
               >
-                <span>{isLinking ? "Descargando bóveda..." : "Descargar y Vincular Bóveda"}</span>
+                <span>{isLinking ? t("onboarding.connectingBtn") : t("onboarding.linkConnectBtn")}</span>
                 <ArrowRight size={16} />
               </button>
             </div>

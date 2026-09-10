@@ -61,15 +61,11 @@ export async function decodeQrFromImageFile(file: File): Promise<string> {
           if (result && result.data) {
             resolve(result.data);
           } else {
-            reject(
-              new Error(
-                "No se encontró ningún código QR en la imagen. Asegúrate de que el código esté bien enfocado e iluminado."
-              )
-            );
+            reject(new Error("NO_QR_FOUND"));
           }
         } catch (err: unknown) {
           const msg = err instanceof Error ? err.message : String(err);
-          reject(new Error(`Error al decodificar la imagen: ${msg}`));
+          reject(new Error(msg));
         }
       };
 

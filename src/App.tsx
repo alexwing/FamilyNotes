@@ -114,10 +114,7 @@ export function App() {
           setPreferences(updatedPrefs);
           await Api.lockVault();
           setIsUnlocked(false);
-          setManualUnlockError(
-            t("settings.family.deviceRevokedMsg") ||
-              "Este dispositivo ha sido eliminado de la bóveda familiar. Introduce la contraseña maestra para volver a acceder."
-          );
+          setManualUnlockError(t("settings.family.deviceRevokedMsg"));
           return;
         }
       }
@@ -154,12 +151,12 @@ export function App() {
       await refreshVaultData();
       hasPendingChangesRef.current = false;
       if (!isSilent) {
-        showToast("Sincronización FTP completada", "📡");
+        showToast(t("toasts.syncCompleted"), "📡");
       }
     } catch (err: unknown) {
       if (!isSilent) {
         const msg = err instanceof Error ? err.message : String(err);
-        showToast(`Error al sincronizar: ${msg}`, "❌");
+        showToast(t("toasts.syncError", { msg }), "❌");
       }
       console.warn("Sync failed or skipped:", err);
     } finally {
@@ -358,10 +355,7 @@ export function App() {
                   });
                   await Api.lockVault();
                   setIsUnlocked(false);
-                  setManualUnlockError(
-                    t("settings.family.deviceRevokedMsg") ||
-                      "Este dispositivo ha sido eliminado de la bóveda familiar. Introduce la contraseña maestra para volver a acceder."
-                  );
+                  setManualUnlockError(t("settings.family.deviceRevokedMsg"));
                   return;
                 }
               }
@@ -369,7 +363,7 @@ export function App() {
               setIsUnlocked(true);
               await refreshVaultData();
               void performSync(true);
-              showToast(`Bóveda "${active.name}" abierta`, "🔓");
+              showToast(t("toasts.vaultOpened", { name: active.name }), "🔓");
             } catch (err) {
               console.warn("Auto-unlock failed, prompting password:", err);
               setIsUnlocked(false);
@@ -426,10 +420,10 @@ export function App() {
       setIsOnboardingOpen(false);
       setIsUnlocked(true);
       await refreshVaultData();
-      showToast("¡Bóveda creada y guardada con éxito!", "🎉");
+      showToast(t("toasts.vaultCreated"), "🎉");
     } catch (e) {
       console.error("Failed to create vault:", e);
-      showToast("Error al crear la bóveda", "❌");
+      showToast(t("toasts.vaultCreateError"), "❌");
     }
   };
 
@@ -452,7 +446,7 @@ export function App() {
 
       const newVault: VaultProfile = {
         id: `vault-ftp-${Date.now()}`,
-        name: `Bóveda Compartida (${config.host})`,
+        name: t("vaultManager.sharedVaultDefaultName", { host: config.host }),
         filePath,
         icon: "☁️",
         savedMasterPassword: password,
@@ -480,7 +474,7 @@ export function App() {
       setIsUnlocked(true);
       await refreshVaultData();
       void performSync(true);
-      showToast("¡Bóveda vinculada y descargada desde el FTP!", "🎉");
+      showToast(t("toasts.vaultLinked"), "🎉");
     } catch (e) {
       console.error("Link via FTP error:", e);
       throw e;
@@ -538,7 +532,7 @@ export function App() {
     await Api.lockVault();
     setIsUnlocked(false);
     setVaultData(null);
-    showToast("Bóveda cerrada", "🔒");
+    showToast(t("toasts.vaultLocked"), "🔒");
   };
 
   // Multi-Vault: Switch Vault
@@ -568,7 +562,7 @@ export function App() {
         setIsUnlocked(true);
         await refreshVaultData();
         void performSync(true);
-        showToast(`Bóveda "${vault.name}" abierta`, "🔓");
+        showToast(t("toasts.vaultOpened", { name: vault.name }), "🔓");
         return;
       } catch (e) {
         console.warn("Vault switch unlock failed:", e);
@@ -612,7 +606,7 @@ export function App() {
 
     setIsUnlocked(true);
     await refreshVaultData();
-    showToast(`Bóveda "${name}" creada y lista`, "🎉");
+    showToast(t("toasts.vaultReady", { name }), "🎉");
   };
 
   // Multi-Vault: Pick Local Vault File (.fnvault / .pdvault)
@@ -620,13 +614,13 @@ export function App() {
     try {
       const selected = await open({
         multiple: false,
-        filters: [{ name: "Bóveda Cifrada", extensions: ["fnvault", "pdvault"] }],
+        filters: [{ name: "Family Vault", extensions: ["fnvault", "pdvault"] }],
       });
 
       if (!selected || typeof selected !== "string") return;
 
       const path = selected;
-      const fileName = path.split(/[/\\]/).pop()?.replace(/\.[^.]+$/, "") || "Bóveda Local";
+      const fileName = path.split(/[/\\]/).pop()?.replace(/\.[^.]+$/, "") || "Vault";
 
       const newVault: VaultProfile = {
         id: `vault-${Date.now()}`,
@@ -651,7 +645,7 @@ export function App() {
       await handleSelectVault(newVault);
     } catch (err) {
       console.error("Pick vault file error:", err);
-      showToast("No se pudo abrir el archivo", "❌");
+      showToast(t("toasts.openFileError"), "❌");
     }
   };
 
@@ -664,7 +658,7 @@ export function App() {
     };
     await Api.savePreferences(updatedPrefs);
     setPreferences(updatedPrefs);
-    showToast("Bóveda actualizada", "✅");
+    showToast(t("toasts.vaultUpdated"), "✅");
   };
 
   // Multi-Vault: Remove Vault from list
@@ -701,7 +695,7 @@ export function App() {
       const snap = await Api.upsertCatalogItem(item);
       await persistVaultFile(snap.contents);
       await refreshVaultData();
-      showToast(`"${item.name}" guardado en el diccionario`, "📚");
+      showToast(t("toasts.dictSaved", { name: item.name }), "📚");
       scheduleDebouncedSync();
     } catch (e) {
       console.error("Upsert catalog error:", e);
@@ -713,7 +707,7 @@ export function App() {
       const snap = await Api.deleteCatalogItem(id);
       await persistVaultFile(snap.contents);
       await refreshVaultData();
-      showToast("Producto eliminado del diccionario", "🗑");
+      showToast(t("toasts.dictDeleted"), "🗑");
       scheduleDebouncedSync();
     } catch (e) {
       console.error("Delete catalog error:", e);
@@ -880,7 +874,7 @@ export function App() {
       if (lastSnap) {
         await persistVaultFile(lastSnap.contents);
       }
-      showToast("Comprados vaciados", "🧹");
+      showToast(t("toasts.completedCleared"), "🧹");
       scheduleDebouncedSync();
     } catch (e) {
       console.error("Clear completed error:", e);
@@ -889,12 +883,12 @@ export function App() {
   };
 
   const handleClearHistory = async () => {
-    if (!confirm("¿Seguro que quieres borrar el historial de compras?")) return;
+    if (!confirm(t("history.clearHistoryConfirm"))) return;
     try {
       const snap = await Api.clearPurchaseHistory();
       await persistVaultFile(snap.contents);
       await refreshVaultData();
-      showToast("Historial borrado", "🗑️");
+      showToast(t("history.clearHistoryToast"), "🗑️");
       scheduleDebouncedSync();
     } catch (e) {
       console.error("Clear history error:", e);
@@ -914,7 +908,7 @@ export function App() {
       });
       const snap = await Api.deletePurchaseHistoryItem(text);
       await persistVaultFile(snap.contents);
-      showToast(t("history.itemDeleted") || "Producto eliminado del historial", "🗑️");
+      showToast(t("history.itemDeleted"), "🗑️");
       scheduleDebouncedSync();
     } catch (e) {
       console.error("Delete history item error:", e);
@@ -981,7 +975,7 @@ export function App() {
       await persistVaultFile(snap.contents);
       await refreshVaultData();
       setSelectedListId(newListId);
-      showToast(`Lista "${name}" creada`, "📝");
+      showToast(t("toasts.listCreated", { name }), "📝");
       scheduleDebouncedSync();
     } catch (e) {
       console.error("Create list error:", e);
@@ -1007,7 +1001,7 @@ export function App() {
       const snap = await Api.upsertShoppingList(updated);
       await persistVaultFile(snap.contents);
       await refreshVaultData();
-      showToast(`Lista "${name}" actualizada`, "✏️");
+      showToast(t("toasts.listUpdated", { name }), "✏️");
       scheduleDebouncedSync();
     } catch (e) {
       console.error("Update list error:", e);
@@ -1023,7 +1017,7 @@ export function App() {
       if (remaining.length > 0) {
         setSelectedListId(remaining[0].id);
       }
-      showToast("Lista eliminada", "🗑");
+      showToast(t("toasts.listDeleted"), "🗑");
       scheduleDebouncedSync();
     } catch (e) {
       console.error("Delete list error:", e);
@@ -1046,7 +1040,7 @@ export function App() {
       if (remainingActive.length > 0) {
         setSelectedListId(remainingActive[0].id);
       }
-      showToast(`Lista "${existing.name}" archivada`, "📦");
+      showToast(t("toasts.listArchived", { name: existing.name }), "📦");
       scheduleDebouncedSync();
     } catch (e) {
       console.error("Archive list error:", e);
@@ -1066,7 +1060,7 @@ export function App() {
       await persistVaultFile(snap.contents);
       await refreshVaultData();
       setSelectedListId(id);
-      showToast(`Lista "${existing.name}" desarchivada`, "✅");
+      showToast(t("toasts.listUnarchived", { name: existing.name }), "✅");
       scheduleDebouncedSync();
     } catch (e) {
       console.error("Unarchive list error:", e);
@@ -1079,7 +1073,7 @@ export function App() {
       const snap = await Api.upsertNote(note);
       await persistVaultFile(snap.contents);
       await refreshVaultData();
-      showToast("Nota guardada", "💾");
+      showToast(t("toasts.noteSaved"), "💾");
       scheduleDebouncedSync();
     } catch (e) {
       console.error("Save note error:", e);
@@ -1099,7 +1093,7 @@ export function App() {
     try {
       const snap = await Api.deleteNote(id);
       await persistVaultFile(snap.contents);
-      showToast("Nota eliminada", "🗑");
+      showToast(t("toasts.noteDeleted"), "🗑");
       scheduleDebouncedSync();
     } catch (e) {
       console.error("Delete note error:", e);
@@ -1128,7 +1122,7 @@ export function App() {
       };
       const snap = await Api.upsertNote(updated);
       await persistVaultFile(snap.contents);
-      showToast("Nota archivada", "📦");
+      showToast(t("toasts.noteArchived"), "📦");
       scheduleDebouncedSync();
     } catch (e) {
       console.error("Archive note error:", e);
@@ -1157,7 +1151,7 @@ export function App() {
       };
       const snap = await Api.upsertNote(updated);
       await persistVaultFile(snap.contents);
-      showToast("Nota desarchivada", "✅");
+      showToast(t("toasts.noteUnarchived"), "✅");
       scheduleDebouncedSync();
     } catch (e) {
       console.error("Unarchive note error:", e);
@@ -1187,19 +1181,19 @@ export function App() {
           const syncSnap = await Api.syncNow();
           await persistVaultFile(syncSnap.contents);
           await refreshVaultData();
-          showToast("¡Bóveda guardada y sincronizada en el FTP!", "📡");
+          showToast(t("toasts.vaultSynced"), "📡");
         } catch (syncErr: unknown) {
           const msg = syncErr instanceof Error ? syncErr.message : String(syncErr);
-          showToast(`Guardado localmente, pero falló FTP: ${msg}`, "⚠️");
+          showToast(t("toasts.saveLocalFtpFail", { msg }), "⚠️");
         } finally {
           setSyncing(false);
         }
       } else {
-        showToast("Configuración FTP guardada", "💾");
+        showToast(t("toasts.ftpSaved"), "💾");
       }
     } catch (e) {
       console.error("Save sync config error:", e);
-      showToast("Error al guardar configuración", "❌");
+      showToast(t("toasts.ftpSaveError"), "❌");
     }
   };
 

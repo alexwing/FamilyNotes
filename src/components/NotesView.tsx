@@ -113,7 +113,7 @@ export const NotesView: React.FC<NotesViewProps> = ({
                 ? "bg-amber-500/15 dark:bg-slate-800 text-amber-700 dark:text-amber-300 border-amber-500/40"
                 : "bg-white/80 dark:bg-slate-900/60 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:text-slate-900 dark:hover:text-slate-300 hover:border-slate-300 dark:hover:border-slate-700"
             }`}
-            title="Desplegar notas archivadas"
+            title={t("notes.archivedSectionTitle", { count: archivedNotes.length })}
           >
             <Archive size={14} />
             <span className="hidden sm:inline">{t("common.archived")}</span>
@@ -252,7 +252,7 @@ export const NotesView: React.FC<NotesViewProps> = ({
                 {t("notes.noteDeletedUndo")}
               </p>
               <p className="mt-1 text-xs text-slate-700 dark:text-slate-300 line-clamp-2">
-                {lastDeletedNote.title || "Sin título"}
+                {lastDeletedNote.title || t("notes.untitledNote")}
               </p>
             </div>
             <button

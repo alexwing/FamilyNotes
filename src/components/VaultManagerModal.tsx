@@ -57,15 +57,15 @@ export const VaultManagerModal: React.FC<VaultManagerModalProps> = ({
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
-      setError("Escribe un nombre para la nueva bóveda");
+      setError(t("vaultManager.nameRequired"));
       return;
     }
     if (!password) {
-      setError("Introduce una contraseña maestra para cifrar la bóveda");
+      setError(t("vaultManager.passRequired"));
       return;
     }
     if (password !== repeatPassword) {
-      setError("Las contraseñas no coinciden");
+      setError(t("vaultManager.passMismatch"));
       return;
     }
 
@@ -80,7 +80,7 @@ export const VaultManagerModal: React.FC<VaultManagerModalProps> = ({
       onClose();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      setError(`Error al crear bóveda: ${msg}`);
+      setError(t("vaultManager.createError", { msg }));
     } finally {
       setIsSubmitting(false);
     }
@@ -117,7 +117,7 @@ export const VaultManagerModal: React.FC<VaultManagerModalProps> = ({
                 </span>
               </h3>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                Gestiona y alterna entre múltiples bóvedas independientes
+                {t("vaultManager.subtitle")}
               </p>
             </div>
           </div>
@@ -156,7 +156,7 @@ export const VaultManagerModal: React.FC<VaultManagerModalProps> = ({
                 className="p-3 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-2xl flex items-center justify-center gap-2 text-xs transition shadow-md shadow-purple-600/20 cursor-pointer"
               >
                 <QrCode size={16} />
-                <span>Vincular con QR / FTP</span>
+                <span>{t("vaultManager.linkWithQrFtp")}</span>
               </button>
             </div>
 
@@ -173,7 +173,7 @@ export const VaultManagerModal: React.FC<VaultManagerModalProps> = ({
             {/* Vaults List */}
             <div className="space-y-2 pt-1">
               <label className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider block px-1">
-                Bóvedas Disponibles
+                {t("vaultManager.availableVaults")}
               </label>
 
               {vaults.map((v) => {
@@ -265,7 +265,7 @@ export const VaultManagerModal: React.FC<VaultManagerModalProps> = ({
             {/* Icon selection */}
             <div>
               <label className="text-[10px] text-slate-500 dark:text-slate-400 font-bold block mb-1">
-                ELIGE UN ICONO
+                {t("vaultManager.chooseIcon").toUpperCase()}
               </label>
               <div className="flex gap-1.5 overflow-x-auto pb-1">
                 {VAULT_ICONS.map((em) => (
@@ -288,12 +288,12 @@ export const VaultManagerModal: React.FC<VaultManagerModalProps> = ({
             {/* Name */}
             <div>
               <label className="text-[10px] text-slate-500 dark:text-slate-400 font-bold block mb-1">
-                NOMBRE DE LA BÓVEDA
+                {t("vaultManager.vaultName").toUpperCase()}
               </label>
               <input
                 type="text"
                 autoFocus
-                placeholder="Ej: Bóveda Personal, Trabajo, Casa Playa..."
+                placeholder={t("vaultManager.vaultNamePlaceholder")}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white outline-none focus:border-emerald-500"
@@ -303,13 +303,13 @@ export const VaultManagerModal: React.FC<VaultManagerModalProps> = ({
             {/* Password */}
             <div>
               <label className="text-[10px] text-slate-500 dark:text-slate-400 font-bold block mb-1">
-                CONTRASEÑA MAESTRA
+                {t("vaultManager.masterPass").toUpperCase()}
               </label>
               <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 focus-within:border-emerald-500">
                 <Key size={14} className="text-slate-400" />
                 <input
                   type="password"
-                  placeholder="Contraseña para cifrar esta bóveda..."
+                  placeholder={t("vaultManager.masterPassPlaceholder")}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full bg-transparent text-xs text-slate-900 dark:text-white font-mono outline-none"
@@ -320,13 +320,13 @@ export const VaultManagerModal: React.FC<VaultManagerModalProps> = ({
             {/* Repeat Password */}
             <div>
               <label className="text-[10px] text-slate-500 dark:text-slate-400 font-bold block mb-1">
-                REPETIR CONTRASEÑA
+                {t("vaultManager.repeatPass").toUpperCase()}
               </label>
               <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 focus-within:border-emerald-500">
                 <Lock size={14} className="text-slate-400" />
                 <input
                   type="password"
-                  placeholder="Repite la contraseña..."
+                  placeholder={t("vaultManager.repeatPassPlaceholder")}
                   value={repeatPassword}
                   onChange={(e) => setRepeatPassword(e.target.value)}
                   className="w-full bg-transparent text-xs text-slate-900 dark:text-white font-mono outline-none"
@@ -374,7 +374,7 @@ export const VaultManagerModal: React.FC<VaultManagerModalProps> = ({
             {/* Icon selection */}
             <div>
               <label className="text-[10px] text-slate-500 dark:text-slate-400 font-bold block mb-1">
-                CAMBIAR ICONO
+                {t("vaultManager.changeIcon").toUpperCase()}
               </label>
               <div className="flex gap-1.5 overflow-x-auto pb-1">
                 {VAULT_ICONS.map((em) => (
@@ -397,7 +397,7 @@ export const VaultManagerModal: React.FC<VaultManagerModalProps> = ({
             {/* Name */}
             <div>
               <label className="text-[10px] text-slate-500 dark:text-slate-400 font-bold block mb-1">
-                NOMBRE DE LA BÓVEDA
+                {t("vaultManager.vaultName").toUpperCase()}
               </label>
               <input
                 type="text"

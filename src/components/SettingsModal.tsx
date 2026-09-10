@@ -130,7 +130,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       return;
     }
     if (newPassword.length < 4) {
-      onShowToast("La contraseña debe tener al menos 4 caracteres", "⚠️");
+      onShowToast(t("onboarding.passMinLength"), "⚠️");
       return;
     }
 
@@ -182,12 +182,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           remoteDir: data.dir || "familynotes",
           remoteFile: data.file || "vault.fnvault",
         }));
-        onShowToast("¡Configuración FTP importada desde el QR!", "📡");
+        onShowToast(t("settings.ftp.qrImportedToast"), "📡");
       } else {
-        onShowToast("El QR no contiene datos de servidor FTP válidos", "⚠️");
+        onShowToast(t("onboarding.invalidQr"), "⚠️");
       }
     } catch {
-      onShowToast("Formato de enlace no reconocido", "❌");
+      onShowToast(t("onboarding.invalidLinkFormat"), "❌");
     }
   };
 
@@ -726,7 +726,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     type="button"
                     onClick={async () => {
                       if (!syncConfig.host) {
-                        onShowToast("Primero debes configurar y guardar los datos del FTP", "⚠️");
+                        onShowToast(t("settings.ftp.syncConfigRequired"), "⚠️");
                         setActiveTab("ftp");
                         return;
                       }
@@ -755,7 +755,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         setShowQrModal(true);
                       } catch (e) {
                         console.error("QR generation error:", e);
-                        onShowToast("Error generando código QR", "❌");
+                        onShowToast(t("settings.ftp.qrError"), "❌");
                       }
                     }}
                     className="px-3.5 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold rounded-xl text-xs transition shadow-lg shadow-purple-500/20 flex items-center justify-center gap-1.5 cursor-pointer"
@@ -790,9 +790,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </button>
 
               <div>
-                <h4 className="font-bold text-slate-900 dark:text-white text-base">Escanear para Vincular</h4>
+                <h4 className="font-bold text-slate-900 dark:text-white text-base">
+                  {t("settings.family.qrModalTitle")}
+                </h4>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                  Abre FamilyNotes en el nuevo dispositivo y escanea este código.
+                  {t("settings.family.qrModalSubtitle")}
                 </p>
               </div>
 
@@ -800,18 +802,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <div className="p-3 bg-white rounded-2xl shadow-xl inline-block mx-auto">
                 <img
                   src={qrCodeUrl}
-                  alt="Código QR de vinculación"
+                  alt={t("settings.family.qrModalAlt")}
                   className="w-56 h-56 mx-auto rounded-lg"
                 />
               </div>
 
               <div className="p-3 bg-purple-500/10 border border-purple-500/25 rounded-xl text-[10px] text-purple-900 dark:text-purple-200 text-left space-y-1">
-                <span className="font-bold block text-purple-700 dark:text-purple-300">ℹ️ ¿Cómo funciona?</span>
+                <span className="font-bold block text-purple-700 dark:text-purple-300">
+                  {t("settings.family.qrModalHowTitle")}
+                </span>
                 <p>
-                  El nuevo equipo leerá los datos del FTP (<strong>{syncConfig.host}</strong>) y descargará el archivo <strong>{syncConfig.remoteFile}</strong>.
+                  {t("settings.family.qrModalHowDesc", { host: syncConfig.host, file: syncConfig.remoteFile })}
                 </p>
                 <p className="text-slate-500 dark:text-slate-400">
-                  Por seguridad, la contraseña maestra no va en el QR; el nuevo usuario la escribirá para descifrar la bóveda.
+                  {t("settings.family.qrModalHowSecurity")}
                 </p>
               </div>
 
@@ -821,15 +825,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   onClick={async () => {
                     try {
                       await navigator.clipboard.writeText(qrString);
-                      onShowToast("Código copiado al portapapeles", "📋");
+                      onShowToast(t("settings.ftp.copiedToast"), "📋");
                     } catch {
-                      onShowToast("No se pudo copiar", "⚠️");
+                      onShowToast(t("settings.ftp.copyErrorToast"), "⚠️");
                     }
                   }}
                   className="flex-1 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <Copy size={13} />
-                  <span>Copiar</span>
+                  <span>{t("common.copy")}</span>
                 </button>
 
                 <button
@@ -853,7 +857,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           handleScanQrData(text);
         }}
         onClose={() => setIsScannerOpen(false)}
-        title="Importar Servidor FTP con QR"
+        title={t("settings.family.scanQrModalTitle")}
       />
     </div>
   );

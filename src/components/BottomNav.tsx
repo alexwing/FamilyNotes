@@ -19,7 +19,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
 
   return (
     <nav
-      aria-label="Navegación móvil"
+      aria-label="Navigation"
       className="fixed bottom-0 inset-x-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-t border-slate-200 dark:border-slate-800/90 px-4 pt-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] flex items-center justify-around md:hidden shadow-[0_-4px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_-8px_20px_rgba(0,0,0,0.4)] transition-colors"
     >
       {/* 1. Listas de Compra */}

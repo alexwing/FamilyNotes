@@ -491,7 +491,7 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
             <button
               type="button"
               onClick={() => {
-                if (confirm(`¿Seguro que deseas eliminar definitivamente "${currentList.name}"?`)) {
+                if (confirm(t("lists.deleteListPermanentlyConfirm", { name: currentList.name }))) {
                   onDeleteList(currentList.id);
                 }
               }}
@@ -726,7 +726,7 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
           {isAllListsSelected && activeLists.length > 1 && (
             <div className="flex items-center gap-1.5 overflow-x-auto py-1 hide-scrollbar">
               <span className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold shrink-0">
-                {t("lists.addToList") || "Añadir a:"}
+                {t("lists.addToList")}
               </span>
               {activeLists.map((l) => {
                 const isTarget = effectiveAddListId === l.id;
@@ -757,7 +757,7 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
             }
             placeholder={
               isAllListsSelected
-                ? t("lists.searchPlaceholderAll") || "Añadir artículo a la compra..."
+                ? t("lists.searchPlaceholderAll")
                 : t("lists.searchPlaceholder", { name: currentList?.name || "" })
             }
           />
