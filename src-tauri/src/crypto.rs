@@ -159,12 +159,15 @@ mod tests {
                 items: vec![],
                 created_at: now_iso(),
                 updated_at: now_iso(),
+                archived: false,
             }],
             notes: vec![],
             purchase_history: vec![],
+            deleted_history_items: vec![],
             catalog: vec![],
             sync: Default::default(),
             members: vec![],
+            deleted_member_ids: vec![],
         };
 
         let ciphertext = seal_payload(&data, &mut header, &key[..]).expect("seal");

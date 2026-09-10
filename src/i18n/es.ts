@@ -17,6 +17,7 @@ const es = {
     edit: "Editar",
     back: "Volver",
     category: "Categoría",
+    add: "Añadir",
   },
   nav: {
     lists: "Listas",
@@ -244,6 +245,10 @@ const es = {
       deleteDeviceConfirm: "Este dispositivo se bloqueará y se le obligará a introducir la contraseña maestra para volver a acceder a la aplicación.",
       deviceDeletedToast: 'Dispositivo "{{name}}" eliminado',
       deviceRevokedMsg: "Este dispositivo ha sido eliminado de la bóveda familiar. Introduce la contraseña maestra para volver a acceder.",
+      qrTitle: "Vincular Dispositivo Familiar",
+      qrDesc: "Comparte la configuración de la bóveda mediante un código QR seguro o escanea uno existente.",
+      showQrBtn: "Mostrar Código QR",
+      scanQrBtn: "Escanear QR Familiar",
     },
   },
   lock: {

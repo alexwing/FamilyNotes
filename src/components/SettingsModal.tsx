@@ -431,29 +431,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 />
               </div>
 
-              {/* Import from QR button */}
-              <div className="flex items-center justify-between p-3 bg-purple-500/10 border border-purple-500/20 rounded-2xl">
-                <div className="flex items-center gap-2.5 text-purple-600 dark:text-purple-300 text-xs">
-                  <div className="w-8 h-8 rounded-xl bg-purple-500/20 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
-                    <QrCode size={16} />
-                  </div>
-                  <div>
-                    <span className="font-bold text-slate-900 dark:text-white block">{t("settings.ftp.qrTitle")}</span>
-                    <span className="text-[11px] text-purple-700/80 dark:text-purple-300/80">
-                      {t("settings.ftp.qrDesc")}
-                    </span>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsScannerOpen(true)}
-                  className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shrink-0 shadow-md shadow-purple-600/20"
-                >
-                  <Camera size={13} />
-                  <span>{t("settings.ftp.scanQrBtn")}</span>
-                </button>
-              </div>
-
               <div className="grid grid-cols-3 gap-3">
                 <div className="col-span-2">
                   <label className="text-[10px] text-slate-500 dark:text-slate-400 font-bold block mb-1">
@@ -738,53 +715,64 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <div className="p-4 bg-purple-500/10 border border-purple-500/25 rounded-2xl space-y-3 text-center">
                 <QrCode size={32} className="mx-auto text-purple-600 dark:text-purple-400" />
                 <div>
-                  <h5 className="font-bold text-xs text-slate-900 dark:text-white">{t("settings.ftp.qrTitle")}</h5>
+                  <h5 className="font-bold text-xs text-slate-900 dark:text-white">{t("settings.family.qrTitle")}</h5>
                   <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5">
-                    {t("settings.ftp.qrDesc")}
+                    {t("settings.family.qrDesc")}
                   </p>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={async () => {
-                    if (!syncConfig.host) {
-                      onShowToast("Primero debes configurar y guardar los datos del FTP", "⚠️");
-                      setActiveTab("ftp");
-                      return;
-                    }
-                    const payload = {
-                      fn_link: 1,
-                      host: syncConfig.host,
-                      port: syncConfig.port,
-                      user: syncConfig.username,
-                      pass: syncConfig.password,
-                      dir: syncConfig.remoteDir,
-                      file: syncConfig.remoteFile,
-                      proto: syncConfig.protocol,
-                    };
-                    const encoded = `fnlink://${btoa(JSON.stringify(payload))}`;
-                    setQrString(encoded);
-                    try {
-                      const url = await QRCode.toDataURL(encoded, {
-                        width: 280,
-                        margin: 2,
-                        color: {
-                          dark: "#090d16",
-                          light: "#ffffff",
-                        },
-                      });
-                      setQrCodeUrl(url);
-                      setShowQrModal(true);
-                    } catch (e) {
-                      console.error("QR generation error:", e);
-                      onShowToast("Error generando código QR", "❌");
-                    }
-                  }}
-                  className="px-4 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold rounded-xl text-xs transition shadow-lg shadow-purple-500/20 flex items-center justify-center gap-2 mx-auto cursor-pointer"
-                >
-                  <QrCode size={16} />
-                  <span>📷 {t("settings.ftp.showQrBtn")}</span>
-                </button>
+                <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!syncConfig.host) {
+                        onShowToast("Primero debes configurar y guardar los datos del FTP", "⚠️");
+                        setActiveTab("ftp");
+                        return;
+                      }
+                      const payload = {
+                        fn_link: 1,
+                        host: syncConfig.host,
+                        port: syncConfig.port,
+                        user: syncConfig.username,
+                        pass: syncConfig.password,
+                        dir: syncConfig.remoteDir,
+                        file: syncConfig.remoteFile,
+                        proto: syncConfig.protocol,
+                      };
+                      const encoded = `fnlink://${btoa(JSON.stringify(payload))}`;
+                      setQrString(encoded);
+                      try {
+                        const url = await QRCode.toDataURL(encoded, {
+                          width: 280,
+                          margin: 2,
+                          color: {
+                            dark: "#090d16",
+                            light: "#ffffff",
+                          },
+                        });
+                        setQrCodeUrl(url);
+                        setShowQrModal(true);
+                      } catch (e) {
+                        console.error("QR generation error:", e);
+                        onShowToast("Error generando código QR", "❌");
+                      }
+                    }}
+                    className="px-3.5 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold rounded-xl text-xs transition shadow-lg shadow-purple-500/20 flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <QrCode size={14} />
+                    <span>{t("settings.family.showQrBtn")}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsScannerOpen(true)}
+                    className="px-3.5 py-2 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-purple-700 dark:text-purple-300 border border-purple-300 dark:border-purple-500/40 font-bold rounded-xl text-xs transition shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <Camera size={14} />
+                    <span>{t("settings.family.scanQrBtn")}</span>
+                  </button>
+                </div>
               </div>
             </div>
           )}

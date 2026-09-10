@@ -17,6 +17,7 @@ const en = {
     edit: "Edit",
     back: "Back",
     category: "Category",
+    add: "Add",
   },
   nav: {
     lists: "Lists",
@@ -244,6 +245,10 @@ const en = {
       deleteDeviceConfirm: "This device will be locked out and will be required to enter the master password to regain access.",
       deviceDeletedToast: 'Device "{{name}}" removed',
       deviceRevokedMsg: "This device has been removed from the family vault. Enter the master password to regain access.",
+      qrTitle: "Link Family Device",
+      qrDesc: "Share vault configuration via a secure QR code or scan an existing one.",
+      showQrBtn: "Show QR Code",
+      scanQrBtn: "Scan Family QR",
     },
   },
   lock: {

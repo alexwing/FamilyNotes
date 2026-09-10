@@ -120,7 +120,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
                       className="px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-600 dark:text-emerald-400 hover:text-slate-950 dark:hover:text-slate-950 font-bold text-xs rounded-xl border border-emerald-500/30 transition flex items-center gap-1 cursor-pointer"
                     >
                       <Plus size={13} />
-                      <span>{t("lists.addBtn")}</span>
+                      <span>{t("common.add")}</span>
                     </button>
                   )}
                   {onDeleteItem && (

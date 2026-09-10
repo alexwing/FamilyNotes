@@ -133,6 +133,8 @@ pub struct VaultData {
     #[serde(default)]
     pub purchase_history: Vec<PurchaseHistoryItem>,
     #[serde(default)]
+    pub deleted_history_items: Vec<String>,
+    #[serde(default)]
     pub catalog: Vec<ProductCatalogItem>,
     #[serde(default = "default_sync_config")]
     pub sync: SyncConfig,

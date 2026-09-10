@@ -76,9 +76,11 @@ export interface VaultData {
   shoppingLists: ShoppingList[];
   notes: Note[];
   purchaseHistory: PurchaseHistoryItem[];
+  deletedHistoryItems?: string[];
   catalog: ProductCatalogItem[];
   sync: SyncConfig;
   members: FamilyMember[];
+  deletedMemberIds?: string[];
 }
 
 export interface VaultStatus {

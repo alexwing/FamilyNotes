@@ -241,6 +241,7 @@ fn seed_sample_data(device_name: &str, device_id: &str) -> VaultData {
             },
         ],
         deleted_member_ids: Vec::new(),
+        deleted_history_items: Vec::new(),
     }
 }
 
@@ -443,6 +444,8 @@ pub fn upsert_shopping_item(
     // Record in history
     let norm_name = item.text.trim();
     if !norm_name.is_empty() {
+        let norm_lower = norm_name.to_lowercase();
+        data.deleted_history_items.retain(|d| d.trim().to_lowercase() != norm_lower);
         if let Some(hist) = data.purchase_history.iter_mut().find(|h| h.text.eq_ignore_ascii_case(norm_name)) {
             hist.count += 1;
         } else {
@@ -495,9 +498,22 @@ pub fn toggle_shopping_item(
 
         // Update purchase frequency
         let norm_name = item.text.trim();
-        if let Some(hist) = data.purchase_history.iter_mut().find(|h| h.text.eq_ignore_ascii_case(norm_name)) {
-            hist.count += 1;
-            hist.last_purchased_at = now;
+        if !norm_name.is_empty() {
+            let norm_lower = norm_name.to_lowercase();
+            data.deleted_history_items.retain(|d| d.trim().to_lowercase() != norm_lower);
+            if let Some(hist) = data.purchase_history.iter_mut().find(|h| h.text.eq_ignore_ascii_case(norm_name)) {
+                hist.count += 1;
+                hist.last_purchased_at = now;
+            } else {
+                data.purchase_history.push(PurchaseHistoryItem {
+                    text: norm_name.to_string(),
+                    emoji: item.emoji.clone().unwrap_or_else(|| "🛒".to_string()),
+                    category: item.category.clone().unwrap_or_else(|| "General".to_string()),
+                    count: 1,
+                    last_purchased_at: now,
+                    avg_interval_days: Some(7),
+                });
+            }
         }
     } else {
         item.checked_at = None;
@@ -686,10 +702,20 @@ fn merge_notes(primary: &[Note], secondary: &[Note]) -> Vec<Note> {
 fn merge_purchase_history(
     primary: &[PurchaseHistoryItem],
     secondary: &[PurchaseHistoryItem],
+    deleted_items: &HashSet<String>,
 ) -> Vec<PurchaseHistoryItem> {
-    let mut result = primary.to_vec();
+    let mut result: Vec<PurchaseHistoryItem> = Vec::new();
+    for pri_item in primary {
+        let key = pri_item.text.trim().to_lowercase();
+        if !deleted_items.contains(&key) {
+            result.push(pri_item.clone());
+        }
+    }
     for sec_item in secondary {
         let sec_key = sec_item.text.trim().to_lowercase();
+        if deleted_items.contains(&sec_key) {
+            continue;
+        }
         if let Some(pri_item) = result.iter_mut().find(|i| i.text.trim().to_lowercase() == sec_key) {
             pri_item.count = std::cmp::max(pri_item.count, sec_item.count);
             if sec_item.last_purchased_at > pri_item.last_purchased_at {
@@ -762,6 +788,16 @@ pub fn sync_now(state: State<'_, VaultState>) -> Result<VaultSnapshot, String> {
                 all_deleted.insert(d.clone());
             }
 
+            // Merge deleted_history_items
+            let mut all_deleted_hist: HashSet<String> = local_data
+                .deleted_history_items
+                .iter()
+                .map(|s| s.trim().to_lowercase())
+                .collect();
+            for d in &remote_data.deleted_history_items {
+                all_deleted_hist.insert(d.trim().to_lowercase());
+            }
+
             // Merge members: filter out deleted ones
             let mut merged_members: Vec<FamilyMember> = Vec::new();
             let mut seen_ids: HashSet<String> = HashSet::new();
@@ -810,7 +846,7 @@ pub fn sync_now(state: State<'_, VaultState>) -> Result<VaultSnapshot, String> {
             } else {
                 (&local_data.purchase_history, &remote_data.purchase_history)
             };
-            let merged_hist = merge_purchase_history(pri_hist, sec_hist);
+            let merged_hist = merge_purchase_history(pri_hist, sec_hist, &all_deleted_hist);
 
             let (pri_cat, sec_cat) = if remote_data.revision >= local_data.revision {
                 (&remote_data.catalog, &local_data.catalog)
@@ -825,6 +861,7 @@ pub fn sync_now(state: State<'_, VaultState>) -> Result<VaultSnapshot, String> {
             local_data.shopping_lists = merged_lists;
             local_data.notes = merged_notes;
             local_data.purchase_history = merged_hist;
+            local_data.deleted_history_items = all_deleted_hist.into_iter().collect();
             local_data.catalog = merged_cat;
         }
     }
@@ -992,6 +1029,12 @@ pub fn clear_purchase_history(
     let mut mgr = state.lock().map_err(|_| "mutex_lock_failed")?;
     let data = mgr.data.as_mut().ok_or_else(|| "vault_locked".to_string())?;
 
+    for p in &data.purchase_history {
+        let norm = p.text.trim().to_lowercase();
+        if !data.deleted_history_items.iter().any(|d| d.trim().to_lowercase() == norm) {
+            data.deleted_history_items.push(norm);
+        }
+    }
     data.purchase_history.clear();
     data.revision += 1;
     mgr.seal_current()
@@ -1061,6 +1104,9 @@ pub fn delete_purchase_history_item(
 
     let norm_target = text.trim().to_lowercase();
     data.purchase_history.retain(|p| p.text.trim().to_lowercase() != norm_target);
+    if !data.deleted_history_items.iter().any(|d| d.trim().to_lowercase() == norm_target) {
+        data.deleted_history_items.push(norm_target);
+    }
     data.revision += 1;
     mgr.seal_current()
 }
