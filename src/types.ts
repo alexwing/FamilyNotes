@@ -103,6 +103,10 @@ export interface VaultProfile {
   savedMasterPassword?: string | null;
 }
 
+export type ThemeMode = "system" | "dark" | "light";
+export type SupportedLanguage = "en" | "es";
+export type LanguageSetting = "system" | "en" | "es";
+
 export interface Preferences {
   theme: string;
   language: string;
@@ -113,3 +117,4 @@ export interface Preferences {
   activeVaultId?: string | null;
   vaults: VaultProfile[];
 }
+

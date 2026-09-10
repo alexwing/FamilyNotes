@@ -6,6 +6,7 @@ import {
   BUILTIN_DICTIONARY,
   normalizeText,
 } from "../utils/productDictionary";
+import { useTranslation } from "../context/LanguageContext";
 
 interface AmazonAutoCompleteProps {
   history: PurchaseHistoryItem[];
@@ -25,8 +26,9 @@ export const AmazonAutoComplete: React.FC<AmazonAutoCompleteProps> = ({
   customCatalog = [],
   onAddItem,
   onOpenCatalogModal,
-  placeholder = "Escribe un producto (ej: 'leche', 'manzanas', 'pan')...",
+  placeholder = "Escribe un producto...",
 }) => {
+  const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [customEmoji, setCustomEmoji] = useState<string | null>(null);
@@ -125,7 +127,7 @@ export const AmazonAutoComplete: React.FC<AmazonAutoCompleteProps> = ({
     <div ref={containerRef} className="relative w-full">
       <form
         onSubmit={handleSubmit}
-        className="flex items-center gap-2 bg-slate-900 border-2 border-slate-800 focus-within:border-emerald-500 rounded-2xl p-1.5 pl-2.5 shadow-lg transition-all"
+        className="flex items-center gap-2 bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 focus-within:border-emerald-500 rounded-2xl p-1.5 pl-2.5 shadow-md dark:shadow-lg transition-all"
       >
         {/* Dynamic Emoji Button with click-to-change picker */}
         <div className="relative">
@@ -133,14 +135,14 @@ export const AmazonAutoComplete: React.FC<AmazonAutoCompleteProps> = ({
             type="button"
             onClick={() => setShowEmojiMenu(!showEmojiMenu)}
             title="Icono detectado automáticamente. Haz clic para cambiarlo."
-            className="w-8 h-8 rounded-xl bg-slate-800/90 hover:bg-slate-700 flex items-center justify-center text-lg transition-transform active:scale-95 cursor-pointer"
+            className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/90 dark:hover:bg-slate-700 flex items-center justify-center text-lg transition-transform active:scale-95 cursor-pointer"
           >
             <span>{activeEmoji}</span>
           </button>
 
           {/* Quick Emoji Menu */}
           {showEmojiMenu && (
-            <div className="absolute top-full left-0 mt-2 z-50 bg-slate-900 border border-slate-700 rounded-2xl p-2 shadow-2xl grid grid-cols-6 gap-1 w-52 max-h-44 overflow-y-auto">
+            <div className="absolute top-full left-0 mt-2 z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-2 shadow-2xl grid grid-cols-6 gap-1 w-52 max-h-44 overflow-y-auto">
               {QUICK_EMOJIS.map((em) => (
                 <button
                   key={em}
@@ -149,7 +151,7 @@ export const AmazonAutoComplete: React.FC<AmazonAutoCompleteProps> = ({
                     setCustomEmoji(em);
                     setShowEmojiMenu(false);
                   }}
-                  className="p-1.5 text-base hover:bg-slate-800 rounded-lg transition"
+                  className="p-1.5 text-base hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition"
                 >
                   {em}
                 </button>
@@ -158,7 +160,7 @@ export const AmazonAutoComplete: React.FC<AmazonAutoCompleteProps> = ({
           )}
         </div>
 
-        <Search size={16} className="text-slate-500 shrink-0 hidden sm:block" />
+        <Search size={16} className="text-slate-400 dark:text-slate-500 shrink-0 hidden sm:block" />
 
         <input
           type="text"
@@ -170,12 +172,12 @@ export const AmazonAutoComplete: React.FC<AmazonAutoCompleteProps> = ({
           }}
           onFocus={() => setIsOpen(true)}
           placeholder={placeholder}
-          className="w-full bg-transparent text-xs sm:text-sm text-white placeholder-slate-500 outline-none"
+          className="w-full bg-transparent text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none"
         />
 
         {/* Category preview badge if detected */}
         {query.trim() && smartMatch.category !== "General" && (
-          <span className="hidden md:inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/25 shrink-0">
+          <span className="hidden md:inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/25 shrink-0">
             {smartMatch.category}
           </span>
         )}
@@ -191,37 +193,37 @@ export const AmazonAutoComplete: React.FC<AmazonAutoCompleteProps> = ({
 
       {/* AUTOCOMPLETE DROPDOWN */}
       {isOpen && (historyMatches.length > 0 || catalogMatches.length > 0 || onOpenCatalogModal) && (
-        <div className="absolute left-0 right-0 top-full mt-2 bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl p-2 z-50 space-y-2 backdrop-blur-md max-h-80 overflow-y-auto">
+        <div className="absolute left-0 right-0 top-full mt-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 rounded-2xl shadow-2xl p-2 z-50 space-y-2 backdrop-blur-md max-h-80 overflow-y-auto text-slate-900 dark:text-white">
           {/* History Matches */}
           {historyMatches.length > 0 && (
             <div>
-              <div className="flex items-center justify-between px-2.5 py-1 border-b border-slate-800 text-[10px] text-amber-400 font-bold uppercase tracking-wider">
+              <div className="flex items-center justify-between px-2.5 py-1 border-b border-slate-200 dark:border-slate-800 text-[10px] text-amber-600 dark:text-amber-400 font-bold uppercase tracking-wider">
                 <span className="flex items-center gap-1.5">
                   <Sparkles size={11} />
-                  <span>Compras habituales</span>
+                  <span>{t("history.title")}</span>
                 </span>
-                <span className="text-slate-500">Historial</span>
+                <span className="text-slate-400 dark:text-slate-500">{t("nav.history")}</span>
               </div>
               <div className="space-y-0.5 mt-1">
                 {historyMatches.map((item, idx) => (
                   <div
                     key={`hist-${idx}`}
                     onClick={() => handleSelectHistory(item)}
-                    className="flex items-center justify-between p-2 rounded-xl hover:bg-slate-800 cursor-pointer transition group"
+                    className="flex items-center justify-between p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition group"
                   >
                     <div className="flex items-center gap-2.5">
                       <span className="text-lg">{item.emoji}</span>
                       <div>
-                        <span className="text-xs font-semibold text-slate-200 block group-hover:text-white">
+                        <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 block group-hover:text-black dark:group-hover:text-white">
                           {item.text}
                         </span>
-                        <span className="text-[10px] text-slate-400">
-                          Comprado {item.count} {item.count === 1 ? "vez" : "veces"} • {item.category}
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                          {t("history.timesPurchased", { count: item.count })} • {item.category}
                         </span>
                       </div>
                     </div>
-                    <span className="text-xs font-bold text-emerald-400 opacity-0 group-hover:opacity-100 transition">
-                      + Añadir
+                    <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 opacity-0 group-hover:opacity-100 transition">
+                      {t("lists.addBtn")}
                     </span>
                   </div>
                 ))}
@@ -232,31 +234,31 @@ export const AmazonAutoComplete: React.FC<AmazonAutoCompleteProps> = ({
           {/* Catalog / Dictionary Matches */}
           {catalogMatches.length > 0 && (
             <div>
-              <div className="flex items-center justify-between px-2.5 py-1 border-b border-slate-800 text-[10px] text-purple-300 font-bold uppercase tracking-wider">
+              <div className="flex items-center justify-between px-2.5 py-1 border-b border-slate-200 dark:border-slate-800 text-[10px] text-purple-600 dark:text-purple-300 font-bold uppercase tracking-wider">
                 <span className="flex items-center gap-1.5">
                   <BookOpen size={11} />
-                  <span>Sugerencias del Diccionario</span>
+                  <span>{t("nav.dictionary")}</span>
                 </span>
-                <span className="text-slate-500">Catálogo</span>
+                <span className="text-slate-400 dark:text-slate-500">Catálogo</span>
               </div>
               <div className="space-y-0.5 mt-1">
                 {catalogMatches.map((item, idx) => (
                   <div
                     key={`cat-${idx}`}
                     onClick={() => handleSelectCatalog(item)}
-                    className="flex items-center justify-between p-2 rounded-xl hover:bg-slate-800 cursor-pointer transition group"
+                    className="flex items-center justify-between p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition group"
                   >
                     <div className="flex items-center gap-2.5">
                       <span className="text-lg">{item.emoji}</span>
                       <div>
-                        <span className="text-xs font-semibold text-slate-200 block group-hover:text-white">
+                        <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 block group-hover:text-black dark:group-hover:text-white">
                           {item.name}
                         </span>
-                        <span className="text-[10px] text-purple-400/80">{item.category}</span>
+                        <span className="text-[10px] text-purple-600 dark:text-purple-400/80">{item.category}</span>
                       </div>
                     </div>
-                    <span className="text-xs font-bold text-purple-400 opacity-0 group-hover:opacity-100 transition">
-                      + Añadir
+                    <span className="text-xs font-bold text-purple-600 dark:text-purple-400 opacity-0 group-hover:opacity-100 transition">
+                      {t("lists.addBtn")}
                     </span>
                   </div>
                 ))}
@@ -266,17 +268,17 @@ export const AmazonAutoComplete: React.FC<AmazonAutoCompleteProps> = ({
 
           {/* Manage Catalog Link */}
           {onOpenCatalogModal && (
-            <div className="pt-1 border-t border-slate-800/80">
+            <div className="pt-1 border-t border-slate-200 dark:border-slate-800/80">
               <button
                 type="button"
                 onClick={() => {
                   setIsOpen(false);
                   onOpenCatalogModal();
                 }}
-                className="w-full py-1.5 px-2.5 text-[11px] font-bold text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 rounded-xl flex items-center justify-center gap-1.5 transition"
+                className="w-full py-1.5 px-2.5 text-[11px] font-bold text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 hover:bg-purple-500/10 rounded-xl flex items-center justify-center gap-1.5 transition"
               >
                 <BookOpen size={13} />
-                <span>Gestionar diccionario de productos y emojis...</span>
+                <span>{t("nav.dictionary")}...</span>
               </button>
             </div>
           )}

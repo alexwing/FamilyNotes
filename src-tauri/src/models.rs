@@ -239,8 +239,8 @@ pub struct Preferences {
 impl Default for Preferences {
     fn default() -> Self {
         Self {
-            theme: "dark".to_string(),
-            language: "es".to_string(),
+            theme: "system".to_string(),
+            language: "system".to_string(),
             current_device_name: "Mi Dispositivo".to_string(),
             current_device_id: uuid::Uuid::new_v4().to_string(),
             saved_master_password: None,

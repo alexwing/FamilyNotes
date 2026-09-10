@@ -22,13 +22,15 @@ import { OnboardingModal } from "./components/OnboardingModal";
 import { VaultManagerModal } from "./components/VaultManagerModal";
 import { ProductCatalogModal } from "./components/ProductCatalogModal";
 import { BottomNav } from "./components/BottomNav";
+import { useTranslation } from "./context/LanguageContext";
 
 const DEFAULT_VAULT_FILENAME = "family_notes.fnvault";
 
 export function App() {
+  const { t } = useTranslation();
   const [preferences, setPreferences] = useState<Preferences>({
-    theme: "dark",
-    language: "es",
+    theme: "system",
+    language: "system",
     currentDeviceName: "Mi Dispositivo",
     currentDeviceId: "dev-local",
     savedMasterPassword: null,
@@ -414,9 +416,9 @@ export function App() {
       setManualUnlockPassword("");
       await refreshVaultData();
       void performSync(true);
-      showToast("Desbloqueado con éxito", "🔓");
+      showToast(t("lock.unlockSuccess"), "🔓");
     } catch {
-      setManualUnlockError("Contraseña incorrecta. Inténtalo de nuevo.");
+      setManualUnlockError(t("lock.unlockError"));
     }
   };
 
@@ -983,49 +985,49 @@ export function App() {
   // Render Manual Unlock Screen
   if (!isUnlocked) {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4">
+      <div className="min-h-screen bg-slate-100 dark:bg-slate-950 flex flex-col items-center justify-center p-4 transition-colors">
         <form
           onSubmit={handleManualUnlock}
-          className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-sm w-full space-y-4 shadow-2xl text-center animate-in fade-in duration-200"
+          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 max-w-sm w-full space-y-4 shadow-2xl text-center animate-in fade-in duration-200 text-slate-900 dark:text-white"
         >
           <img src="/icon.png" alt="FamilyNotes" className="w-14 h-14 rounded-2xl mx-auto shadow-lg shadow-emerald-500/20" />
           <div>
-            <h2 className="text-lg font-bold text-white">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">
               {currentVault?.name || "FamilyNotes"}
             </h2>
-            <p className="text-xs text-slate-400 mt-1">Introduce tu contraseña maestra para acceder</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{t("lock.enterPassword")}</p>
           </div>
 
           <div className="text-left space-y-1">
             <input
               type="password"
               autoFocus
-              placeholder="Contraseña..."
+              placeholder={t("lock.passwordPlaceholder")}
               value={manualUnlockPassword}
               onChange={(e) => setManualUnlockPassword(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white font-mono outline-none focus:border-emerald-500"
+              className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-white font-mono outline-none focus:border-emerald-500"
             />
             {manualUnlockError && (
-              <p className="text-xs text-rose-400 font-medium">{manualUnlockError}</p>
+              <p className="text-xs text-rose-500 dark:text-rose-400 font-medium">{manualUnlockError}</p>
             )}
           </div>
 
           <button
             type="submit"
-            className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs transition shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2"
+            className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs transition shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 cursor-pointer"
           >
             <Lock size={14} />
-            <span>Desbloquear Bóveda</span>
+            <span>{t("lock.unlockBtn")}</span>
           </button>
 
           {preferences.vaults.length > 1 && (
             <button
               type="button"
               onClick={() => setIsVaultManagerOpen(true)}
-              className="text-xs text-slate-400 hover:text-white flex items-center justify-center gap-1.5 mx-auto pt-2"
+              className="text-xs text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white flex items-center justify-center gap-1.5 mx-auto pt-2 cursor-pointer"
             >
               <FolderLock size={13} />
-              <span>Cambiar de bóveda ({preferences.vaults.length})</span>
+              <span>{t("lock.switchVault", { count: preferences.vaults.length })}</span>
             </button>
           )}
         </form>
@@ -1054,7 +1056,7 @@ export function App() {
   const totalNotes = (vaultData?.notes || []).length;
 
   return (
-    <div className="fixed inset-0 bg-slate-950 text-slate-100 flex flex-col overflow-hidden">
+    <div className="fixed inset-0 bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col overflow-hidden transition-colors">
       {/* Top Header */}
       <Header
         activeTab={activeTab}

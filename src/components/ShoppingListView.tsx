@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { PurchaseHistoryItem, ShoppingList, ProductCatalogItem } from "../types";
 import { AmazonAutoComplete } from "./AmazonAutoComplete";
+import { useTranslation } from "../context/LanguageContext";
 
 interface ShoppingListViewProps {
   lists: ShoppingList[];
@@ -50,6 +51,7 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
   onClearCompleted,
   onOpenCatalogModal,
 }) => {
+  const { t } = useTranslation();
   const [isCreatingList, setIsCreatingList] = useState(false);
   const [newListName, setNewListName] = useState("");
   const [newListColor, setNewListColor] = useState("#10b981");
@@ -98,7 +100,6 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
   const replenishmentAlerts = React.useMemo(() => {
     if (!currentList || isCurrentArchived) return [];
     return history.filter((h) => {
-      // If it's already in pending items, don't recommend it
       const alreadyInList = currentList.items.some(
         (i) => i.text.toLowerCase() === h.text.toLowerCase() && !i.checked
       );
@@ -118,14 +119,14 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
   if (lists.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center p-12 text-center">
-        <ShoppingBag size={48} className="text-slate-600 mb-3" />
-        <h3 className="text-lg font-bold text-white mb-1">No tienes listas de la compra</h3>
-        <p className="text-xs text-slate-400 mb-4">Crea una lista para comenzar a compartir productos con tu familia.</p>
+        <ShoppingBag size={48} className="text-slate-400 dark:text-slate-600 mb-3" />
+        <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">{t("lists.empty")}</h3>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">{t("lists.emptyDesc")}</p>
         <button
-          onClick={() => onCreateList("Mercadona", "#10b981", "cart")}
-          className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs transition"
+          onClick={() => onCreateList("Supermercado", "#10b981", "cart")}
+          className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs transition cursor-pointer"
         >
-          + Crear primera lista (Mercadona)
+          {t("lists.createFirst")}
         </button>
       </div>
     );
@@ -143,8 +144,8 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
               key={list.id}
               className={`flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition-all border ${
                 isSelected
-                  ? "bg-slate-800 text-white border-emerald-500 shadow-md ring-1 ring-emerald-500/30"
-                  : "bg-slate-900/80 text-slate-400 border-slate-800 hover:text-slate-200 hover:border-slate-700"
+                  ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-white border-emerald-500 shadow-md ring-1 ring-emerald-500/30"
+                  : "bg-white/80 dark:bg-slate-900/80 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:text-slate-900 dark:hover:text-slate-200 hover:border-slate-300 dark:hover:border-slate-700"
               }`}
             >
               <button
@@ -157,8 +158,8 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
                 <span
                   className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
                     pendCount > 0
-                      ? "bg-emerald-500/20 text-emerald-400"
-                      : "bg-slate-800 text-slate-500"
+                      ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400"
+                      : "bg-slate-200 dark:bg-slate-800 text-slate-500"
                   }`}
                 >
                   {pendCount}
@@ -172,8 +173,8 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
                     e.stopPropagation();
                     handleOpenEditList(list);
                   }}
-                  title={`Editar o eliminar lista "${list.name}"`}
-                  className="p-1 -mr-1 rounded-md text-slate-400 hover:text-emerald-400 hover:bg-slate-700/70 transition cursor-pointer"
+                  title={t("lists.editListTitle")}
+                  className="p-1 -mr-1 rounded-md text-slate-400 hover:text-emerald-500 hover:bg-slate-100 dark:hover:bg-slate-700/70 transition cursor-pointer"
                 >
                   <Edit3 size={13} />
                 </button>
@@ -184,10 +185,10 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
 
         <button
           onClick={() => setIsCreatingList(true)}
-          className="flex items-center gap-1 px-3 py-1.5 sm:py-2 rounded-xl bg-slate-900/60 hover:bg-slate-800 text-slate-400 hover:text-white text-xs font-semibold border border-dashed border-slate-800 hover:border-slate-700 transition cursor-pointer"
+          className="flex items-center gap-1 px-3 py-1.5 sm:py-2 rounded-xl bg-white/60 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white text-xs font-semibold border border-dashed border-slate-300 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-700 transition cursor-pointer"
         >
           <Plus size={14} />
-          <span>Nueva lista</span>
+          <span>{t("lists.newList")}</span>
         </button>
 
         {archivedLists.length > 0 && (
@@ -196,33 +197,33 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
             onClick={() => setShowArchived((prev) => !prev)}
             className={`flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-xl text-xs font-semibold transition border cursor-pointer ${
               showArchived || isCurrentArchived
-                ? "bg-slate-800 text-amber-300 border-amber-500/40"
-                : "bg-slate-900/60 text-slate-400 border-slate-800 hover:text-slate-300 hover:border-slate-700"
+                ? "bg-amber-500/15 dark:bg-slate-800 text-amber-700 dark:text-amber-300 border-amber-500/40"
+                : "bg-white/60 dark:bg-slate-900/60 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:text-slate-900 dark:hover:text-slate-300"
             }`}
             title="Desplegar listas archivadas"
           >
             <Archive size={13} />
-            <span>Archivadas ({archivedLists.length})</span>
+            <span>{t("lists.archivedBadge", { count: archivedLists.length })}</span>
           </button>
         )}
 
         {onOpenCatalogModal && (
           <button
             onClick={onOpenCatalogModal}
-            title="Abrir diccionario de productos para configurar iconos y categorías"
-            className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/25 text-xs font-semibold transition ml-auto cursor-pointer"
+            title={t("nav.dictionary")}
+            className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/25 text-xs font-semibold transition ml-auto cursor-pointer"
           >
             <BookOpen size={14} />
-            <span>Diccionario</span>
+            <span>{t("nav.dictionary")}</span>
           </button>
         )}
       </div>
 
       {/* ARCHIVED LISTS DROPDOWN / UNFOLD ROW */}
       {(showArchived || isCurrentArchived) && archivedLists.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5 p-2 bg-slate-900/60 border border-slate-800/80 rounded-2xl shrink-0">
-          <span className="text-[11px] text-amber-400/80 font-semibold px-1 flex items-center gap-1">
-            <Archive size={12} /> Listas archivadas:
+        <div className="flex flex-wrap items-center gap-1.5 p-2 bg-white/60 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 rounded-2xl shrink-0">
+          <span className="text-[11px] text-amber-700 dark:text-amber-400/80 font-semibold px-1 flex items-center gap-1">
+            <Archive size={12} /> {t("lists.archivedSectionTitle")}
           </span>
           {archivedLists.map((list) => {
             const isSelected = list.id === currentList?.id;
@@ -233,8 +234,8 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
                 onClick={() => onSelectList(list.id)}
                 className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-semibold border transition cursor-pointer ${
                   isSelected
-                    ? "bg-amber-500/20 text-amber-200 border-amber-500/50 shadow-sm"
-                    : "bg-slate-950/70 text-slate-400 border-slate-800 hover:text-slate-300"
+                    ? "bg-amber-500/20 text-amber-800 dark:text-amber-200 border-amber-500/50 shadow-sm"
+                    : "bg-slate-100 dark:bg-slate-950/70 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:text-slate-900 dark:hover:text-slate-300"
                 }`}
               >
                 <span>📦</span>
@@ -248,14 +249,14 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
 
       {/* ARCHIVED LIST BANNER (READ-ONLY) */}
       {isCurrentArchived && currentList && (
-        <div className="bg-gradient-to-r from-amber-500/10 via-slate-900 to-slate-900 border border-amber-500/30 rounded-2xl p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shrink-0">
+        <div className="bg-gradient-to-r from-amber-500/10 via-white dark:via-slate-900 to-white dark:to-slate-900 border border-amber-500/30 rounded-2xl p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-300 flex items-center justify-center shrink-0">
+            <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-300 flex items-center justify-center shrink-0">
               <Archive size={16} />
             </div>
             <div>
-              <h4 className="text-xs font-bold text-amber-200">Lista archivada: {currentList.name}</h4>
-              <p className="text-[11px] text-slate-400">Esta lista no se puede editar. Puedes desarchivarla o eliminarla definitivamente.</p>
+              <h4 className="text-xs font-bold text-amber-800 dark:text-amber-200">{t("lists.archivedTitle", { name: currentList.name })}</h4>
+              <p className="text-[11px] text-slate-600 dark:text-slate-400">{t("lists.archivedBannerDesc")}</p>
             </div>
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
@@ -266,20 +267,20 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
                 className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3.5 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs transition cursor-pointer shadow-md shadow-emerald-500/20"
               >
                 <ArchiveRestore size={14} />
-                <span>Desarchivar</span>
+                <span>{t("common.unarchive")}</span>
               </button>
             )}
             <button
               type="button"
               onClick={() => {
-                if (confirm(`¿Seguro que deseas eliminar definitivamente "${currentList.name}"? Se borrarán todos sus productos.`)) {
+                if (confirm(`¿Seguro que deseas eliminar definitivamente "${currentList.name}"?`)) {
                   onDeleteList(currentList.id);
                 }
               }}
-              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3.5 py-1.5 bg-rose-500/20 hover:bg-rose-500 text-rose-300 hover:text-white border border-rose-500/40 font-bold rounded-xl text-xs transition cursor-pointer"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3.5 py-1.5 bg-rose-500/10 hover:bg-rose-500 text-rose-600 hover:text-white dark:bg-rose-500/20 dark:text-rose-300 border border-rose-500/40 font-bold rounded-xl text-xs transition cursor-pointer"
             >
               <Trash2 size={14} />
-              <span>Eliminar</span>
+              <span>{t("common.delete")}</span>
             </button>
           </div>
         </div>
@@ -290,22 +291,22 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <form
             onSubmit={handleCreateListSubmit}
-            className="bg-slate-900 border border-slate-800 rounded-2xl p-5 max-w-sm w-full space-y-4 shadow-2xl"
+            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 max-w-sm w-full space-y-4 shadow-2xl text-slate-900 dark:text-white"
           >
-            <h3 className="text-sm font-bold text-white">Nueva Lista de Compra</h3>
+            <h3 className="text-sm font-bold">{t("lists.createModalTitle")}</h3>
             <div>
-              <label className="text-[11px] text-slate-400 font-bold block mb-1">Nombre de la lista</label>
+              <label className="text-[11px] text-slate-500 dark:text-slate-400 font-bold block mb-1">{t("lists.nameLabel")}</label>
               <input
                 type="text"
                 autoFocus
-                placeholder="Ej: Lidl, Carrefour, Droguería..."
+                placeholder={t("lists.namePlaceholder")}
                 value={newListName}
                 onChange={(e) => setNewListName(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-emerald-500"
+                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white outline-none focus:border-emerald-500"
               />
             </div>
             <div>
-              <label className="text-[11px] text-slate-400 font-bold block mb-1.5">Color distintivo</label>
+              <label className="text-[11px] text-slate-500 dark:text-slate-400 font-bold block mb-1.5">{t("lists.colorLabel")}</label>
               <div className="flex gap-2">
                 {["#10b981", "#38bdf8", "#8b5cf6", "#f59e0b", "#f43f5e"].map((c) => (
                   <button
@@ -313,8 +314,8 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
                     type="button"
                     onClick={() => setNewListColor(c)}
                     style={{ backgroundColor: c }}
-                    className={`w-6 h-6 rounded-full transition-transform ${
-                      newListColor === c ? "scale-125 ring-2 ring-white" : "opacity-80 hover:opacity-100"
+                    className={`w-6 h-6 rounded-full transition-transform cursor-pointer ${
+                      newListColor === c ? "scale-125 ring-2 ring-emerald-500" : "opacity-80 hover:opacity-100"
                     }`}
                   />
                 ))}
@@ -324,15 +325,15 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
               <button
                 type="button"
                 onClick={() => setIsCreatingList(false)}
-                className="px-3 py-1.5 rounded-xl text-xs text-slate-400 hover:text-white"
+                className="px-3 py-1.5 rounded-xl text-xs text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer"
               >
-                Cancelar
+                {t("common.cancel")}
               </button>
               <button
                 type="submit"
-                className="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs transition"
+                className="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs transition cursor-pointer"
               >
-                Crear Lista
+                {t("lists.newList")}
               </button>
             </div>
           </form>
@@ -342,16 +343,16 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
       {/* EDIT LIST MODAL */}
       {editingList && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 max-w-sm w-full space-y-4 shadow-2xl">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 max-w-sm w-full space-y-4 shadow-2xl text-slate-900 dark:text-white">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <Edit3 size={16} className="text-emerald-400" />
-                <span>Editar Lista</span>
+              <h3 className="text-sm font-bold flex items-center gap-2">
+                <Edit3 size={16} className="text-emerald-500" />
+                <span>{t("lists.editListTitle")}</span>
               </h3>
               <button
                 type="button"
                 onClick={() => setEditingList(null)}
-                className="text-slate-400 hover:text-white text-xs p-1"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-white text-xs p-1 cursor-pointer"
               >
                 ✕
               </button>
@@ -359,22 +360,22 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
 
             <form onSubmit={handleUpdateListSubmit} className="space-y-4">
               <div>
-                <label className="text-[11px] text-slate-400 font-bold block mb-1">
-                  Nombre de la lista
+                <label className="text-[11px] text-slate-500 dark:text-slate-400 font-bold block mb-1">
+                  {t("lists.nameLabel")}
                 </label>
                 <input
                   type="text"
                   autoFocus
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-emerald-500"
-                  placeholder="Nombre de la lista..."
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white outline-none focus:border-emerald-500"
+                  placeholder={t("lists.namePlaceholder")}
                 />
               </div>
 
               <div>
-                <label className="text-[11px] text-slate-400 font-bold block mb-1.5">
-                  Color distintivo
+                <label className="text-[11px] text-slate-500 dark:text-slate-400 font-bold block mb-1.5">
+                  {t("lists.colorLabel")}
                 </label>
                 <div className="flex gap-2">
                   {["#10b981", "#38bdf8", "#8b5cf6", "#f59e0b", "#f43f5e", "#ec4899", "#14b8a6"].map((c) => (
@@ -383,46 +384,49 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
                       type="button"
                       onClick={() => setEditColor(c)}
                       style={{ backgroundColor: c }}
-                      className={`w-6 h-6 rounded-full transition-transform ${
-                        editColor === c ? "scale-125 ring-2 ring-white" : "opacity-75 hover:opacity-100"
+                      className={`w-6 h-6 rounded-full transition-transform cursor-pointer ${
+                        editColor === c ? "scale-125 ring-2 ring-emerald-500" : "opacity-75 hover:opacity-100"
                       }`}
                     />
                   ))}
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setEditingList(null)}
-                  className="px-3 py-1.5 rounded-xl text-xs text-slate-400 hover:text-white"
+                  className="px-3 py-1.5 rounded-xl text-xs text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer"
                 >
-                  Cancelar
+                  {t("common.cancel")}
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs transition shadow-md shadow-emerald-500/20"
+                  className="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs transition shadow-md shadow-emerald-500/20 cursor-pointer"
                 >
-                  Guardar Cambios
+                  {t("lists.saveChanges")}
                 </button>
               </div>
             </form>
 
             {/* DELETE OR ARCHIVE LIST SECTION INSIDE MODAL */}
-            <div className="pt-3 border-t border-slate-800/80">
+            <div className="pt-3 border-t border-slate-200 dark:border-slate-800/80">
               {!isConfirmingDelete ? (
                 <button
                   type="button"
                   onClick={() => setIsConfirmingDelete(true)}
-                  className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 text-xs font-bold transition cursor-pointer"
+                  className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30 text-xs font-bold transition cursor-pointer"
                 >
                   <Trash2 size={14} />
-                  <span>Eliminar o archivar esta lista</span>
+                  <span>{t("lists.deleteListBtn")}</span>
                 </button>
               ) : (
-                <div className="p-3 bg-slate-950/80 border border-slate-800 rounded-2xl space-y-2.5">
-                  <p className="text-[11px] text-slate-300 font-medium">
-                    ¿Qué deseas hacer con la lista "{editingList.name}"?
+                <div className="p-3 bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-2.5">
+                  <p className="text-[11px] text-slate-700 dark:text-slate-300 font-medium">
+                    {t("lists.deleteConfirmTitle", { name: editingList.name })}
+                  </p>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                    {t("lists.deleteConfirmWarning", { count: editingList.items.length })}
                   </p>
                   <div className="flex flex-col sm:flex-row gap-2">
                     {onArchiveList && (
@@ -432,10 +436,10 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
                           onArchiveList(editingList.id);
                           setEditingList(null);
                         }}
-                        className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-xs font-bold transition cursor-pointer"
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-xs font-bold transition cursor-pointer"
                       >
                         <Archive size={14} />
-                        <span>Archivar lista</span>
+                        <span>{t("lists.archiveBtn")}</span>
                       </button>
                     )}
                     {lists.length > 1 && (
@@ -445,16 +449,16 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
                         className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition cursor-pointer"
                       >
                         <Trash2 size={14} />
-                        <span>Eliminar</span>
+                        <span>{t("lists.deletePermBtn")}</span>
                       </button>
                     )}
                   </div>
                   <button
                     type="button"
                     onClick={() => setIsConfirmingDelete(false)}
-                    className="w-full py-1 text-center text-[11px] text-slate-400 hover:text-slate-200"
+                    className="w-full py-1 text-center text-[11px] text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 cursor-pointer"
                   >
-                    Cancelar
+                    {t("common.cancel")}
                   </button>
                 </div>
               )}
@@ -463,7 +467,7 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
         </div>
       )}
 
-      {/* 2. REPLENISHMENT SMART ALERTS (AMAZON-STYLE) */}
+      {/* 2. REPLENISHMENT SMART ALERTS */}
       {!isCurrentArchived && replenishmentAlerts.length > 0 && (
         <div className="flex overflow-x-auto snap-x snap-mandatory gap-3 pb-2 -mx-1 px-1 hide-scrollbar shrink-0">
           {replenishmentAlerts.map((alert, idx) => (
@@ -472,16 +476,16 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
                 <span className="text-2xl">{alert.emoji}</span>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1">
+                    <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider flex items-center gap-1">
                       <Sparkles size={11} />
-                      <span>Inteligente</span>
+                      <span>{t("lists.replenishAlert")}</span>
                     </span>
-                    <span className="text-[10px] text-slate-400">
-                      {alert.count} veces
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                      {t("lists.replenishTimes", { count: alert.count })}
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-200 mt-0.5 leading-tight">
-                    ¿Añadir <strong className="text-white">{alert.text}</strong>?
+                  <p className="text-[11px] text-slate-800 dark:text-slate-200 mt-0.5 leading-tight">
+                    {t("lists.replenishQuestion", { text: alert.text })}
                   </p>
                 </div>
               </div>
@@ -489,9 +493,9 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
                 onClick={() =>
                   onAddItem(currentList.id, alert.text, alert.emoji, alert.category)
                 }
-                className="px-3 py-1.5 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs rounded-xl shrink-0 shadow-md transition"
+                className="px-3 py-1.5 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs rounded-xl shrink-0 shadow-md transition cursor-pointer"
               >
-                + Añadir
+                {t("lists.addBtn")}
               </button>
             </div>
           ))}
@@ -508,33 +512,33 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
             onAddItem={(text, emoji, category) =>
               onAddItem(currentList.id, text, emoji, category)
             }
-            placeholder={`Añadir producto a ${currentList.name}...`}
+            placeholder={t("lists.searchPlaceholder", { name: currentList.name })}
           />
         </div>
       )}
 
       {/* 4. SHOPPING LIST CONTENT (PENDING & COMPLETED) */}
-        <div className="space-y-6 pr-1">
+      <div className="space-y-6 pr-1">
         {/* PENDING ITEMS SECTION */}
         <div>
           <div className="flex items-center justify-between mb-2 px-1">
-            <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
-              <span>Por comprar</span>
-              <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 text-[10px] font-bold border border-emerald-500/30">
+            <h3 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-2">
+              <span>{t("lists.toBuy")}</span>
+              <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold border border-emerald-500/30">
                 {pendingItems.length}
               </span>
             </h3>
-            {!isCurrentArchived && <span className="text-[11px] text-slate-500">Toca el checkbox para tachar</span>}
+            {!isCurrentArchived && <span className="text-[11px] text-slate-500">{t("lists.touchToToggle")}</span>}
           </div>
 
           {pendingItems.length === 0 ? (
-            <div className="bg-slate-900/40 border border-slate-800/60 rounded-2xl p-6 text-center">
-              <p className="text-xs text-slate-400">
+            <div className="bg-slate-100/70 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/60 rounded-2xl p-6 text-center">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 {completedItems.length > 0
-                  ? "¡Has comprado todos los artículos pendientes! 🎉"
+                  ? t("lists.emptyPending")
                   : isCurrentArchived
-                  ? "Esta lista archivada no tiene productos pendientes."
-                  : "No hay productos en esta lista. Escribe arriba para añadir el primero."}
+                  ? t("lists.emptyPendingArchived")
+                  : t("lists.emptyListHint")}
               </p>
             </div>
           ) : (
@@ -542,7 +546,7 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
               {pendingItems.map((item) => (
                 <div
                   key={item.id}
-                  className="item-transition bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-xl p-3 flex items-center justify-between gap-3 group shadow-sm"
+                  className="item-transition bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 rounded-xl p-3 flex items-center justify-between gap-3 group shadow-sm"
                 >
                   <div
                     onClick={() => {
@@ -556,26 +560,26 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
                     {!isCurrentArchived && (
                       <button
                         type="button"
-                        className="w-5 h-5 rounded-lg border-2 border-slate-700 group-hover:border-emerald-500 flex items-center justify-center transition shrink-0"
+                        className="w-5 h-5 rounded-lg border-2 border-slate-300 dark:border-slate-700 group-hover:border-emerald-500 flex items-center justify-center transition shrink-0 cursor-pointer"
                       >
-                        <span className="opacity-0 group-hover:opacity-30 text-emerald-400 text-xs">✓</span>
+                        <span className="opacity-0 group-hover:opacity-30 text-emerald-600 dark:text-emerald-400 text-xs">✓</span>
                       </button>
                     )}
 
                     <div className="flex items-center gap-2.5">
                       <span className="text-xl">{item.emoji || "🛒"}</span>
                       <div>
-                        <span className="text-sm font-semibold text-slate-200 block">
+                        <span className="text-sm font-semibold text-slate-800 dark:text-slate-200 block">
                           {item.text}
                         </span>
-                        <div className="flex items-center gap-2 text-[10px] text-slate-400">
+                        <div className="flex items-center gap-2 text-[10px] text-slate-500 dark:text-slate-400">
                           {item.quantity && (
-                            <span className="text-emerald-400 font-medium">
+                            <span className="text-emerald-600 dark:text-emerald-400 font-medium">
                               {item.quantity}
                             </span>
                           )}
                           {item.category && <span>• {item.category}</span>}
-                          {item.checkedBy && <span>• Por {item.checkedBy}</span>}
+                          {item.checkedBy && <span>• {t("lists.addedBy", { name: item.checkedBy })}</span>}
                         </div>
                       </div>
                     </div>
@@ -584,8 +588,8 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
                   {!isCurrentArchived && (
                     <button
                       onClick={() => onDeleteItem(currentList.id, item.id)}
-                      title="Eliminar producto"
-                      className="p-1.5 rounded-lg text-slate-600 hover:text-rose-400 hover:bg-slate-800 transition"
+                      title={t("lists.deleteItemTitle")}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
                     >
                       <Trash2 size={14} />
                     </button>
@@ -596,22 +600,22 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
           )}
         </div>
 
-        {/* COMPLETED ITEMS (MOVED TO THE BOTTOM) */}
+        {/* COMPLETED ITEMS */}
         {completedItems.length > 0 && (
-          <div className="pt-4 border-t border-slate-800/80">
+          <div className="pt-4 border-t border-slate-200 dark:border-slate-800/80">
             <div className="flex items-center justify-between mb-2 px-1">
-              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                <span>Comprados ✓</span>
-                <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 text-[10px] font-bold">
+              <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                <span>{t("lists.completed")} ✓</span>
+                <span className="px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[10px] font-bold">
                   {completedItems.length}
                 </span>
               </h3>
               {!isCurrentArchived && (
                 <button
                   onClick={() => onClearCompleted(currentList.id)}
-                  className="text-[11px] text-rose-400/80 hover:text-rose-400 font-semibold transition"
+                  className="text-[11px] text-rose-500/80 hover:text-rose-500 font-semibold transition cursor-pointer"
                 >
-                  Vaciar comprados
+                  {t("lists.clearCompleted")}
                 </button>
               )}
             </div>
@@ -620,7 +624,7 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
               {completedItems.map((item) => (
                 <div
                   key={item.id}
-                  className="item-transition bg-slate-900/40 border border-slate-800/40 rounded-xl p-2.5 flex items-center justify-between gap-3 opacity-60 hover:opacity-90 transition"
+                  className="item-transition bg-slate-100/70 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/40 rounded-xl p-2.5 flex items-center justify-between gap-3 opacity-75 hover:opacity-100 transition"
                 >
                   <div
                     onClick={() => {
@@ -641,11 +645,11 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
                     <div className="flex items-center gap-2.5">
                       <span className="text-lg opacity-75">{item.emoji || "🛒"}</span>
                       <div>
-                        <span className="text-sm font-medium text-slate-400 line-through block">
+                        <span className="text-sm font-medium text-slate-500 dark:text-slate-400 line-through block">
                           {item.text}
                         </span>
-                        <span className="text-[10px] text-slate-500">
-                          Comprado {item.checkedBy ? `por ${item.checkedBy}` : ""}
+                        <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                          {item.checkedBy ? `${t("lists.completed")} por ${item.checkedBy}` : t("lists.completed")}
                         </span>
                       </div>
                     </div>
@@ -653,8 +657,8 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
 
                   <button
                     onClick={() => onDeleteItem(currentList.id, item.id)}
-                    title="Eliminar"
-                    className="p-1.5 rounded-lg text-slate-600 hover:text-rose-400 transition"
+                    title={t("common.delete")}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 transition cursor-pointer"
                   >
                     <Trash2 size={14} />
                   </button>

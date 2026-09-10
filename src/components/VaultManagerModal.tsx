@@ -11,6 +11,7 @@ import {
   Lock,
 } from "lucide-react";
 import { VaultProfile } from "../types";
+import { useTranslation } from "../context/LanguageContext";
 
 interface VaultManagerModalProps {
   isOpen: boolean;
@@ -39,6 +40,7 @@ export const VaultManagerModal: React.FC<VaultManagerModalProps> = ({
   onUpdateVaultProfile,
   onRemoveVault,
 }) => {
+  const { t } = useTranslation();
   const [view, setView] = useState<"list" | "create" | "edit">("list");
   const [editingVault, setEditingVault] = useState<VaultProfile | null>(null);
 
@@ -58,8 +60,8 @@ export const VaultManagerModal: React.FC<VaultManagerModalProps> = ({
       setError("Escribe un nombre para la nueva bóveda");
       return;
     }
-    if (password.length < 4) {
-      setError("La contraseña debe tener al menos 4 caracteres");
+    if (!password) {
+      setError("Introduce una contraseña maestra para cifrar la bóveda");
       return;
     }
     if (password !== repeatPassword) {
@@ -75,11 +77,10 @@ export const VaultManagerModal: React.FC<VaultManagerModalProps> = ({
       setName("");
       setPassword("");
       setRepeatPassword("");
-      setIcon("🛒");
       onClose();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      setError(`Error al crear: ${msg}`);
+      setError(`Error al crear bóveda: ${msg}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -100,22 +101,22 @@ export const VaultManagerModal: React.FC<VaultManagerModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+    <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-3xl max-w-lg w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
         {/* Header */}
-        <div className="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between bg-slate-900/90 shrink-0">
+        <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-900/90 shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center border border-emerald-500/20">
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20">
               <FolderLock size={18} />
             </div>
             <div>
-              <h3 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
-                <span>Mis Bóvedas (Vaults)</span>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+              <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <span>{t("vaultManager.title")}</span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700">
                   {vaults.length}
                 </span>
               </h3>
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
                 Gestiona y alterna entre múltiples bóvedas independientes
               </p>
             </div>
@@ -123,7 +124,7 @@ export const VaultManagerModal: React.FC<VaultManagerModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition"
+            className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition cursor-pointer"
           >
             <X size={16} />
           </button>
@@ -131,7 +132,7 @@ export const VaultManagerModal: React.FC<VaultManagerModalProps> = ({
 
         {/* VIEW 1: LIST VAULTS */}
         {view === "list" && (
-          <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 text-xs">
             {/* Quick Actions Row */}
             <div className="grid grid-cols-2 gap-2">
               <button
@@ -143,7 +144,7 @@ export const VaultManagerModal: React.FC<VaultManagerModalProps> = ({
                 className="p-3 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold rounded-2xl flex items-center justify-center gap-2 text-xs transition shadow-md shadow-emerald-600/20 cursor-pointer"
               >
                 <Plus size={16} />
-                <span>Crear Nueva Bóveda</span>
+                <span>{t("vaultManager.createNewVault")}</span>
               </button>
 
               <button
@@ -163,15 +164,15 @@ export const VaultManagerModal: React.FC<VaultManagerModalProps> = ({
             <button
               type="button"
               onClick={onPickLocalVaultFile}
-              className="w-full py-2 bg-slate-800/80 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 transition border border-slate-700/60"
+              className="w-full py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/80 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 transition border border-slate-200 dark:border-slate-700/60 cursor-pointer"
             >
-              <FolderOpen size={14} className="text-amber-400" />
-              <span>Abrir archivo .fnvault existente del equipo</span>
+              <FolderOpen size={14} className="text-amber-500" />
+              <span>{t("vaultManager.importFile")}</span>
             </button>
 
             {/* Vaults List */}
             <div className="space-y-2 pt-1">
-              <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block px-1">
+              <label className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider block px-1">
                 Bóvedas Disponibles
               </label>
 
@@ -182,8 +183,8 @@ export const VaultManagerModal: React.FC<VaultManagerModalProps> = ({
                     key={v.id}
                     className={`p-3.5 rounded-2xl border transition flex items-center justify-between ${
                       isActive
-                        ? "bg-slate-800/90 border-emerald-500 shadow-md shadow-emerald-500/10"
-                        : "bg-slate-950/70 border-slate-800 hover:border-slate-700"
+                        ? "bg-emerald-50/50 dark:bg-slate-800/90 border-emerald-500 shadow-md shadow-emerald-500/10"
+                        : "bg-slate-50 dark:bg-slate-950/70 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"
                     }`}
                   >
                     <div
@@ -198,16 +199,16 @@ export const VaultManagerModal: React.FC<VaultManagerModalProps> = ({
                       <span className="text-2xl">{v.icon || "🛒"}</span>
                       <div className="truncate">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs sm:text-sm font-bold text-white truncate block">
+                          <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate block">
                             {v.name}
                           </span>
                           {isActive && (
-                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-                              Activa
+                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40">
+                              {t("vaultManager.activeBadge")}
                             </span>
                           )}
                         </div>
-                        <span className="text-[10px] text-slate-400 truncate block font-mono">
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400 truncate block font-mono">
                           {v.filePath}
                         </span>
                       </div>
@@ -220,8 +221,8 @@ export const VaultManagerModal: React.FC<VaultManagerModalProps> = ({
                           setEditingVault({ ...v });
                           setView("edit");
                         }}
-                        title="Editar nombre e icono"
-                        className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition"
+                        title={t("vaultManager.editProfile")}
+                        className="p-1.5 text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg transition cursor-pointer"
                       >
                         <Edit2 size={13} />
                       </button>
@@ -230,8 +231,8 @@ export const VaultManagerModal: React.FC<VaultManagerModalProps> = ({
                         <button
                           type="button"
                           onClick={() => onRemoveVault(v.id, false)}
-                          title="Quitar de la lista"
-                          className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition"
+                          title={t("vaultManager.deleteVault")}
+                          className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition cursor-pointer"
                         >
                           <Trash2 size={13} />
                         </button>
@@ -246,24 +247,24 @@ export const VaultManagerModal: React.FC<VaultManagerModalProps> = ({
 
         {/* VIEW 2: CREATE NEW VAULT */}
         {view === "create" && (
-          <form onSubmit={handleCreateSubmit} className="p-4 sm:p-5 space-y-4 overflow-y-auto">
+          <form onSubmit={handleCreateSubmit} className="p-4 sm:p-5 space-y-4 overflow-y-auto text-xs">
             <div className="flex items-center justify-between">
-              <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-                <Plus size={14} className="text-emerald-400" />
-                <span>Crear Nueva Bóveda</span>
+              <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                <Plus size={14} className="text-emerald-500" />
+                <span>{t("vaultManager.createNewVault")}</span>
               </h4>
               <button
                 type="button"
                 onClick={() => setView("list")}
-                className="text-xs text-slate-400 hover:text-white"
+                className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer"
               >
-                Volver
+                {t("common.back")}
               </button>
             </div>
 
             {/* Icon selection */}
             <div>
-              <label className="text-[10px] text-slate-400 font-bold block mb-1">
+              <label className="text-[10px] text-slate-500 dark:text-slate-400 font-bold block mb-1">
                 ELIGE UN ICONO
               </label>
               <div className="flex gap-1.5 overflow-x-auto pb-1">
@@ -272,10 +273,10 @@ export const VaultManagerModal: React.FC<VaultManagerModalProps> = ({
                     key={em}
                     type="button"
                     onClick={() => setIcon(em)}
-                    className={`p-2 rounded-xl text-lg transition ${
+                    className={`p-2 rounded-xl text-lg transition cursor-pointer ${
                       icon === em
                         ? "bg-emerald-500/20 border-2 border-emerald-500 scale-110"
-                        : "bg-slate-950 border border-slate-800 hover:bg-slate-800"
+                        : "bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:bg-slate-200 dark:hover:bg-slate-800"
                     }`}
                   >
                     {em}
@@ -286,7 +287,7 @@ export const VaultManagerModal: React.FC<VaultManagerModalProps> = ({
 
             {/* Name */}
             <div>
-              <label className="text-[10px] text-slate-400 font-bold block mb-1">
+              <label className="text-[10px] text-slate-500 dark:text-slate-400 font-bold block mb-1">
                 NOMBRE DE LA BÓVEDA
               </label>
               <input
@@ -295,63 +296,60 @@ export const VaultManagerModal: React.FC<VaultManagerModalProps> = ({
                 placeholder="Ej: Bóveda Personal, Trabajo, Casa Playa..."
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-emerald-500"
+                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white outline-none focus:border-emerald-500"
               />
             </div>
 
             {/* Password */}
             <div>
-              <label className="text-[10px] text-slate-400 font-bold block mb-1">
+              <label className="text-[10px] text-slate-500 dark:text-slate-400 font-bold block mb-1">
                 CONTRASEÑA MAESTRA
               </label>
-              <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 focus-within:border-emerald-500">
+              <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 focus-within:border-emerald-500">
                 <Key size={14} className="text-slate-400" />
                 <input
                   type="password"
                   placeholder="Contraseña para cifrar esta bóveda..."
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-transparent text-xs text-white font-mono outline-none"
+                  className="w-full bg-transparent text-xs text-slate-900 dark:text-white font-mono outline-none"
                 />
               </div>
             </div>
 
             {/* Repeat Password */}
             <div>
-              <label className="text-[10px] text-slate-400 font-bold block mb-1">
+              <label className="text-[10px] text-slate-500 dark:text-slate-400 font-bold block mb-1">
                 REPETIR CONTRASEÑA
               </label>
-              <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 focus-within:border-emerald-500">
+              <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 focus-within:border-emerald-500">
                 <Lock size={14} className="text-slate-400" />
                 <input
                   type="password"
                   placeholder="Repite la contraseña..."
                   value={repeatPassword}
                   onChange={(e) => setRepeatPassword(e.target.value)}
-                  className="w-full bg-transparent text-xs text-white font-mono outline-none"
+                  className="w-full bg-transparent text-xs text-slate-900 dark:text-white font-mono outline-none"
                 />
               </div>
-              <span className="text-[10px] text-slate-500 mt-1 block">
-                Se guardará en este dispositivo para que no te la pida cada vez.
-              </span>
             </div>
 
-            {error && <p className="text-xs text-rose-400 font-medium">{error}</p>}
+            {error && <p className="text-xs text-rose-500 font-medium">{error}</p>}
 
             <div className="flex gap-2 pt-2">
               <button
                 type="button"
                 onClick={() => setView("list")}
-                className="px-4 py-2 rounded-xl text-xs text-slate-400 hover:text-white"
+                className="px-4 py-2 rounded-xl text-xs text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer"
               >
-                Cancelar
+                {t("common.cancel")}
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting || !name.trim() || !password}
-                className="flex-1 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs transition shadow-lg shadow-emerald-500/20 disabled:opacity-50"
+                className="flex-1 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs transition shadow-lg shadow-emerald-500/20 disabled:opacity-50 cursor-pointer"
               >
-                {isSubmitting ? "Creando..." : "Crear Bóveda"}
+                {isSubmitting ? t("common.loading") : t("common.create")}
               </button>
             </div>
           </form>
@@ -359,23 +357,23 @@ export const VaultManagerModal: React.FC<VaultManagerModalProps> = ({
 
         {/* VIEW 3: EDIT VAULT */}
         {view === "edit" && editingVault && (
-          <form onSubmit={handleEditSubmit} className="p-4 sm:p-5 space-y-4">
+          <form onSubmit={handleEditSubmit} className="p-4 sm:p-5 space-y-4 text-xs">
             <div className="flex items-center justify-between">
-              <h4 className="text-xs font-bold text-white uppercase tracking-wider">
-                Editar Bóveda
+              <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                {t("vaultManager.editProfile")}
               </h4>
               <button
                 type="button"
                 onClick={() => setView("list")}
-                className="text-xs text-slate-400 hover:text-white"
+                className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer"
               >
-                Cancelar
+                {t("common.cancel")}
               </button>
             </div>
 
             {/* Icon selection */}
             <div>
-              <label className="text-[10px] text-slate-400 font-bold block mb-1">
+              <label className="text-[10px] text-slate-500 dark:text-slate-400 font-bold block mb-1">
                 CAMBIAR ICONO
               </label>
               <div className="flex gap-1.5 overflow-x-auto pb-1">
@@ -384,10 +382,10 @@ export const VaultManagerModal: React.FC<VaultManagerModalProps> = ({
                     key={em}
                     type="button"
                     onClick={() => setEditingVault({ ...editingVault, icon: em })}
-                    className={`p-2 rounded-xl text-lg transition ${
+                    className={`p-2 rounded-xl text-lg transition cursor-pointer ${
                       editingVault.icon === em
                         ? "bg-emerald-500/20 border-2 border-emerald-500 scale-110"
-                        : "bg-slate-950 border border-slate-800 hover:bg-slate-800"
+                        : "bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:bg-slate-200 dark:hover:bg-slate-800"
                     }`}
                   >
                     {em}
@@ -398,14 +396,14 @@ export const VaultManagerModal: React.FC<VaultManagerModalProps> = ({
 
             {/* Name */}
             <div>
-              <label className="text-[10px] text-slate-400 font-bold block mb-1">
+              <label className="text-[10px] text-slate-500 dark:text-slate-400 font-bold block mb-1">
                 NOMBRE DE LA BÓVEDA
               </label>
               <input
                 type="text"
                 value={editingVault.name}
                 onChange={(e) => setEditingVault({ ...editingVault, name: e.target.value })}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-emerald-500"
+                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white outline-none focus:border-emerald-500"
               />
             </div>
 
@@ -413,15 +411,15 @@ export const VaultManagerModal: React.FC<VaultManagerModalProps> = ({
               <button
                 type="button"
                 onClick={() => setView("list")}
-                className="px-4 py-2 rounded-xl text-xs text-slate-400 hover:text-white"
+                className="px-4 py-2 rounded-xl text-xs text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer"
               >
-                Cancelar
+                {t("common.cancel")}
               </button>
               <button
                 type="submit"
-                className="flex-1 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs transition"
+                className="flex-1 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs transition cursor-pointer"
               >
-                Guardar Cambios
+                {t("common.save")}
               </button>
             </div>
           </form>
