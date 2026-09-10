@@ -138,6 +138,22 @@ The resulting universal release APK will be located at:
 
 ---
 
+## 📦 Releases & Downloads
+
+Precompiled binaries are built automatically via **GitHub Actions** for every release:
+
+| Platform | Format | Description |
+| :--- | :--- | :--- |
+| **Android** | `FamilyNotes-v<version>-Android.apk` | Universal signed release APK ready to install directly on smartphones and tablets. |
+| **Windows** | `FamilyNotes-v<version>-Setup.exe` | Standard Windows NSIS installer with desktop shortcut and uninstaller. |
+| **Windows** | `FamilyNotes-v<version>-Standalone.exe` | Portable single executable — run directly without installation. |
+| **Windows** | `FamilyNotes-v<version>.msi` | Windows Installer package (useful for enterprise or silent deployments). |
+
+> [!TIP]
+> To trigger a new release build automatically, push a git version tag (e.g. `git tag v1.0.0 && git push origin v1.0.0`) or trigger the **Release** workflow from the GitHub Actions tab.
+
+---
+
 ## 📄 License
 
 This project is open source and licensed under the **GPL-3.0** License. See `LICENSE` for details.
