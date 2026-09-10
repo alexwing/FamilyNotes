@@ -1,0 +1,30 @@
+[package]
+name = "family-notes"
+version = "1.0.0"
+description = "Family shared shopping lists and encrypted notes with FTP sync and local key storage"
+authors = ["FamilyNotes Team"]
+edition = "2021"
+license = "GPL-3.0-or-later"
+
+[lib]
+name = "family_notes_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+argon2 = "0.5"
+base64 = "0.22"
+chacha20poly1305 = { version = "0.10", features = ["std"] }
+chrono = { version = "0.4", features = ["serde"] }
+rand_core = { version = "0.6", features = ["getrandom"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+suppaftp = "6"
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+tauri-plugin-opener = "2"
+uuid = { version = "1", features = ["v4", "serde"] }
+zeroize = { version = "1", features = ["derive"] }
