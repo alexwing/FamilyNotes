@@ -4,7 +4,7 @@ version = "1.0.0"
 description = "Family shared shopping lists and encrypted notes with FTP sync and local key storage"
 authors = ["FamilyNotes Team"]
 edition = "2021"
-license = "GPL-3.0-or-later"
+license = "MIT"
 
 [lib]
 name = "family_notes_lib"

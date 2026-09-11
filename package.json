@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Family shared shopping lists and encrypted notes with FTP sync and local key storage",
   "type": "module",
-  "license": "GPL-3.0-or-later",
+  "license": "MIT",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",

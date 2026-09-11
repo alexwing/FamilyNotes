@@ -16,7 +16,15 @@
   <img src="https://img.shields.io/badge/TypeScript-5.6-blue?logo=typescript&logoColor=white" alt="TypeScript" />
   <img src="https://img.shields.io/badge/TailwindCSS-3.4-38bdf8?logo=tailwindcss&logoColor=white" alt="Tailwind CSS" />
   <img src="https://img.shields.io/badge/Security-XChaCha20--Poly1305-emerald?logo=lock&logoColor=white" alt="Encryption" />
-  <img src="https://img.shields.io/badge/License-GPL--3.0-green" alt="GPL 3.0" />
+  <img src="https://img.shields.io/badge/License-MIT-green" alt="MIT License" />
+</p>
+
+<p align="center">
+  <img src="screenshots/02.png" width="90%" alt="FamilyNotes Desktop Interface" style="border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.35);" />
+</p>
+
+<p align="center">
+  📖 <strong><a href="MANUAL.md">Click here to view the Complete User Manual & Operating Guide</a></strong> 📖
 </p>
 
 ---
@@ -156,6 +164,6 @@ Precompiled binaries are built automatically via **GitHub Actions** for every re
 
 ## 📄 License
 
-This project is open source and licensed under the **GPL-3.0** License. See `LICENSE` for details.
+This project is open source and licensed under the **MIT** License. See [`LICENSE`](LICENSE) for details.
 
 
