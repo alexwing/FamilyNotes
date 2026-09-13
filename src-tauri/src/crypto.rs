@@ -168,6 +168,10 @@ mod tests {
             sync: Default::default(),
             members: vec![],
             deleted_member_ids: vec![],
+            deleted_list_ids: vec![],
+            deleted_item_ids: vec![],
+            deleted_note_ids: vec![],
+            deleted_catalog_ids: vec![],
         };
 
         let ciphertext = seal_payload(&data, &mut header, &key[..]).expect("seal");

@@ -81,6 +81,10 @@ export interface VaultData {
   sync: SyncConfig;
   members: FamilyMember[];
   deletedMemberIds?: string[];
+  deletedListIds?: string[];
+  deletedItemIds?: string[];
+  deletedNoteIds?: string[];
+  deletedCatalogIds?: string[];
 }
 
 export interface VaultStatus {

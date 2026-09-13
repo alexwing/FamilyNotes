@@ -242,6 +242,10 @@ fn seed_sample_data(device_name: &str, device_id: &str) -> VaultData {
         ],
         deleted_member_ids: Vec::new(),
         deleted_history_items: Vec::new(),
+        deleted_list_ids: Vec::new(),
+        deleted_item_ids: Vec::new(),
+        deleted_note_ids: Vec::new(),
+        deleted_catalog_ids: Vec::new(),
     }
 }
 
@@ -382,18 +386,22 @@ pub fn upsert_shopping_list(
         }
         list.updated_at = now;
         data.shopping_lists.push(list);
-    } else if let Some(pos) = data.shopping_lists.iter().position(|l| l.id == list.id) {
-        list.updated_at = now;
-        if list.items.is_empty() && !data.shopping_lists[pos].items.is_empty() {
-            list.items = data.shopping_lists[pos].items.clone();
-        }
-        data.shopping_lists[pos] = list;
     } else {
-        if list.created_at.is_empty() {
-            list.created_at = now.clone();
+        let list_id = list.id.clone();
+        data.deleted_list_ids.retain(|id| id != &list_id);
+        if let Some(pos) = data.shopping_lists.iter().position(|l| l.id == list_id) {
+            list.updated_at = now;
+            if list.items.is_empty() && !data.shopping_lists[pos].items.is_empty() {
+                list.items = data.shopping_lists[pos].items.clone();
+            }
+            data.shopping_lists[pos] = list;
+        } else {
+            if list.created_at.is_empty() {
+                list.created_at = now.clone();
+            }
+            list.updated_at = now;
+            data.shopping_lists.push(list);
         }
-        list.updated_at = now;
-        data.shopping_lists.push(list);
     }
 
     mgr.seal_current()
@@ -408,7 +416,19 @@ pub fn delete_shopping_list(
     let data = mgr.data.as_mut().ok_or_else(|| "vault_locked".to_string())?;
 
     data.revision += 1;
-    data.shopping_lists.retain(|l| l.id != list_id);
+    if let Some(pos) = data.shopping_lists.iter().position(|l| l.id == list_id) {
+        let removed = data.shopping_lists.remove(pos);
+        for item in removed.items {
+            if !data.deleted_item_ids.contains(&item.id) {
+                data.deleted_item_ids.push(item.id);
+            }
+        }
+    } else {
+        data.shopping_lists.retain(|l| l.id != list_id);
+    }
+    if !data.deleted_list_ids.contains(&list_id) {
+        data.deleted_list_ids.push(list_id);
+    }
 
     mgr.seal_current()
 }
@@ -428,6 +448,9 @@ pub fn upsert_shopping_item(
         item.created_at = now.clone();
     }
     item.updated_at = now;
+
+    // Un-delete if previously marked deleted
+    data.deleted_item_ids.retain(|id| id != &item.id);
 
     let list = data
         .shopping_lists
@@ -540,6 +563,9 @@ pub fn delete_shopping_item(
         .ok_or("list_not_found")?;
 
     list.items.retain(|i| i.id != item_id);
+    if !data.deleted_item_ids.contains(&item_id) {
+        data.deleted_item_ids.push(item_id);
+    }
     data.revision += 1;
 
     mgr.seal_current()
@@ -559,6 +585,11 @@ pub fn clear_completed_items(
         .find(|l| l.id == list_id)
         .ok_or("list_not_found")?;
 
+    for item in list.items.iter().filter(|i| i.checked) {
+        if !data.deleted_item_ids.contains(&item.id) {
+            data.deleted_item_ids.push(item.id.clone());
+        }
+    }
     list.items.retain(|i| !i.checked);
     data.revision += 1;
 
@@ -580,6 +611,9 @@ pub fn upsert_note(
     }
     note.updated_at = now;
 
+    // Un-delete if previously marked deleted
+    data.deleted_note_ids.retain(|id| id != &note.id);
+
     if let Some(pos) = data.notes.iter().position(|n| n.id == note.id) {
         data.notes[pos] = note;
     } else {
@@ -599,6 +633,9 @@ pub fn delete_note(
     let data = mgr.data.as_mut().ok_or_else(|| "vault_locked".to_string())?;
 
     data.notes.retain(|n| n.id != note_id);
+    if !data.deleted_note_ids.contains(&note_id) {
+        data.deleted_note_ids.push(note_id);
+    }
     data.revision += 1;
 
     mgr.seal_current()
@@ -663,12 +700,30 @@ pub fn test_sync(config: SyncConfig) -> Result<(), String> {
 fn merge_shopping_lists(
     primary: &[ShoppingList],
     secondary: &[ShoppingList],
+    deleted_lists: &HashSet<String>,
+    deleted_items: &HashSet<String>,
 ) -> Vec<ShoppingList> {
-    let mut result = primary.to_vec();
+    let mut result: Vec<ShoppingList> = Vec::new();
+
+    for pri_list in primary {
+        if deleted_lists.contains(&pri_list.id) {
+            continue;
+        }
+        let mut list_copy = pri_list.clone();
+        list_copy.items.retain(|i| !deleted_items.contains(&i.id));
+        result.push(list_copy);
+    }
 
     for sec_list in secondary {
+        if deleted_lists.contains(&sec_list.id) {
+            continue;
+        }
+
         if let Some(pri_list) = result.iter_mut().find(|l| l.id == sec_list.id) {
             for sec_item in &sec_list.items {
+                if deleted_items.contains(&sec_item.id) {
+                    continue;
+                }
                 if let Some(pri_item) = pri_list.items.iter_mut().find(|i| i.id == sec_item.id) {
                     if sec_item.updated_at > pri_item.updated_at {
                         *pri_item = sec_item.clone();
@@ -678,16 +733,31 @@ fn merge_shopping_lists(
                 }
             }
         } else {
-            result.push(sec_list.clone());
+            let mut sec_copy = sec_list.clone();
+            sec_copy.items.retain(|i| !deleted_items.contains(&i.id));
+            result.push(sec_copy);
         }
     }
 
     result
 }
 
-fn merge_notes(primary: &[Note], secondary: &[Note]) -> Vec<Note> {
-    let mut result = primary.to_vec();
+fn merge_notes(
+    primary: &[Note],
+    secondary: &[Note],
+    deleted_notes: &HashSet<String>,
+) -> Vec<Note> {
+    let mut result: Vec<Note> = Vec::new();
+    for pri_note in primary {
+        if !deleted_notes.contains(&pri_note.id) {
+            result.push(pri_note.clone());
+        }
+    }
+
     for sec_note in secondary {
+        if deleted_notes.contains(&sec_note.id) {
+            continue;
+        }
         if let Some(pri_note) = result.iter_mut().find(|n| n.id == sec_note.id) {
             if sec_note.updated_at > pri_note.updated_at {
                 *pri_note = sec_note.clone();
@@ -731,9 +801,18 @@ fn merge_purchase_history(
 fn merge_catalog(
     primary: &[ProductCatalogItem],
     secondary: &[ProductCatalogItem],
+    deleted_catalog: &HashSet<String>,
 ) -> Vec<ProductCatalogItem> {
-    let mut result = primary.to_vec();
+    let mut result: Vec<ProductCatalogItem> = Vec::new();
+    for pri_item in primary {
+        if !deleted_catalog.contains(&pri_item.id) {
+            result.push(pri_item.clone());
+        }
+    }
     for sec_item in secondary {
+        if deleted_catalog.contains(&sec_item.id) {
+            continue;
+        }
         let sec_name = sec_item.name.trim().to_lowercase();
         if !result.iter().any(|i| i.id == sec_item.id || i.name.trim().to_lowercase() == sec_name) {
             result.push(sec_item.clone());
@@ -798,6 +877,46 @@ pub fn sync_now(state: State<'_, VaultState>) -> Result<VaultSnapshot, String> {
                 all_deleted_hist.insert(d.trim().to_lowercase());
             }
 
+            // Merge deleted_list_ids
+            let mut all_deleted_lists: HashSet<String> = local_data
+                .deleted_list_ids
+                .iter()
+                .cloned()
+                .collect();
+            for d in &remote_data.deleted_list_ids {
+                all_deleted_lists.insert(d.clone());
+            }
+
+            // Merge deleted_item_ids
+            let mut all_deleted_items: HashSet<String> = local_data
+                .deleted_item_ids
+                .iter()
+                .cloned()
+                .collect();
+            for d in &remote_data.deleted_item_ids {
+                all_deleted_items.insert(d.clone());
+            }
+
+            // Merge deleted_note_ids
+            let mut all_deleted_notes: HashSet<String> = local_data
+                .deleted_note_ids
+                .iter()
+                .cloned()
+                .collect();
+            for d in &remote_data.deleted_note_ids {
+                all_deleted_notes.insert(d.clone());
+            }
+
+            // Merge deleted_catalog_ids
+            let mut all_deleted_catalog: HashSet<String> = local_data
+                .deleted_catalog_ids
+                .iter()
+                .cloned()
+                .collect();
+            for d in &remote_data.deleted_catalog_ids {
+                all_deleted_catalog.insert(d.clone());
+            }
+
             // Merge members: filter out deleted ones
             let mut merged_members: Vec<FamilyMember> = Vec::new();
             let mut seen_ids: HashSet<String> = HashSet::new();
@@ -832,14 +951,14 @@ pub fn sync_now(state: State<'_, VaultState>) -> Result<VaultSnapshot, String> {
             } else {
                 (&local_data.shopping_lists, &remote_data.shopping_lists)
             };
-            let merged_lists = merge_shopping_lists(pri_lists, sec_lists);
+            let merged_lists = merge_shopping_lists(pri_lists, sec_lists, &all_deleted_lists, &all_deleted_items);
 
             let (pri_notes, sec_notes) = if remote_data.revision >= local_data.revision {
                 (&remote_data.notes, &local_data.notes)
             } else {
                 (&local_data.notes, &remote_data.notes)
             };
-            let merged_notes = merge_notes(pri_notes, sec_notes);
+            let merged_notes = merge_notes(pri_notes, sec_notes, &all_deleted_notes);
 
             let (pri_hist, sec_hist) = if remote_data.revision >= local_data.revision {
                 (&remote_data.purchase_history, &local_data.purchase_history)
@@ -853,16 +972,20 @@ pub fn sync_now(state: State<'_, VaultState>) -> Result<VaultSnapshot, String> {
             } else {
                 (&local_data.catalog, &remote_data.catalog)
             };
-            let merged_cat = merge_catalog(pri_cat, sec_cat);
+            let merged_cat = merge_catalog(pri_cat, sec_cat, &all_deleted_catalog);
 
             local_data.revision = std::cmp::max(local_data.revision, remote_data.revision) + 1;
             local_data.members = merged_members;
             local_data.deleted_member_ids = all_deleted.into_iter().collect();
             local_data.shopping_lists = merged_lists;
+            local_data.deleted_list_ids = all_deleted_lists.into_iter().collect();
+            local_data.deleted_item_ids = all_deleted_items.into_iter().collect();
             local_data.notes = merged_notes;
+            local_data.deleted_note_ids = all_deleted_notes.into_iter().collect();
             local_data.purchase_history = merged_hist;
             local_data.deleted_history_items = all_deleted_hist.into_iter().collect();
             local_data.catalog = merged_cat;
+            local_data.deleted_catalog_ids = all_deleted_catalog.into_iter().collect();
         }
     }
 
@@ -999,6 +1122,9 @@ pub fn upsert_catalog_item(
     let mut new_item = item;
     new_item.id = item_id.clone();
 
+    // Un-delete
+    data.deleted_catalog_ids.retain(|id| id != &item_id);
+
     if let Some(idx) = data.catalog.iter().position(|c| c.id == item_id) {
         data.catalog[idx] = new_item;
     } else {
@@ -1018,6 +1144,9 @@ pub fn delete_catalog_item(
     let data = mgr.data.as_mut().ok_or_else(|| "vault_locked".to_string())?;
 
     data.catalog.retain(|c| c.id != id);
+    if !data.deleted_catalog_ids.contains(&id) {
+        data.deleted_catalog_ids.push(id);
+    }
     data.revision += 1;
     mgr.seal_current()
 }
@@ -1129,4 +1258,180 @@ pub fn reorder_shopping_lists(
     data.shopping_lists = new_lists;
     data.revision += 1;
     mgr.seal_current()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::models::{Note, ProductCatalogItem, ShoppingItem, ShoppingList};
+
+    #[test]
+    fn test_merge_shopping_lists_respects_deleted_items_and_lists() {
+        let mut deleted_lists = HashSet::new();
+        let mut deleted_items = HashSet::new();
+
+        deleted_items.insert("item-2".to_string());
+        deleted_lists.insert("list-2".to_string());
+
+        let pri_lists = vec![
+            ShoppingList {
+                id: "list-1".to_string(),
+                name: "Mercadona".to_string(),
+                color: "#10b981".to_string(),
+                icon: "cart".to_string(),
+                items: vec![ShoppingItem {
+                    id: "item-1".to_string(),
+                    text: "Pan".to_string(),
+                    quantity: None,
+                    category: None,
+                    emoji: None,
+                    checked: false,
+                    checked_at: None,
+                    checked_by: None,
+                    created_at: "2026-01-01T00:00:00Z".to_string(),
+                    updated_at: "2026-01-01T00:00:00Z".to_string(),
+                }],
+                created_at: "2026-01-01T00:00:00Z".to_string(),
+                updated_at: "2026-01-01T00:00:00Z".to_string(),
+                archived: false,
+            },
+        ];
+
+        // Remote has item-2 in list-1, and list-2
+        let sec_lists = vec![
+            ShoppingList {
+                id: "list-1".to_string(),
+                name: "Mercadona".to_string(),
+                color: "#10b981".to_string(),
+                icon: "cart".to_string(),
+                items: vec![
+                    ShoppingItem {
+                        id: "item-1".to_string(),
+                        text: "Pan".to_string(),
+                        quantity: None,
+                        category: None,
+                        emoji: None,
+                        checked: false,
+                        checked_at: None,
+                        checked_by: None,
+                        created_at: "2026-01-01T00:00:00Z".to_string(),
+                        updated_at: "2026-01-01T00:00:00Z".to_string(),
+                    },
+                    ShoppingItem {
+                        id: "item-2".to_string(),
+                        text: "Leche".to_string(),
+                        quantity: None,
+                        category: None,
+                        emoji: None,
+                        checked: false,
+                        checked_at: None,
+                        checked_by: None,
+                        created_at: "2026-01-01T00:00:00Z".to_string(),
+                        updated_at: "2026-01-01T00:00:00Z".to_string(),
+                    },
+                ],
+                created_at: "2026-01-01T00:00:00Z".to_string(),
+                updated_at: "2026-01-01T00:00:00Z".to_string(),
+                archived: false,
+            },
+            ShoppingList {
+                id: "list-2".to_string(),
+                name: "Ferretería".to_string(),
+                color: "#f59e0b".to_string(),
+                icon: "tool".to_string(),
+                items: vec![],
+                created_at: "2026-01-01T00:00:00Z".to_string(),
+                updated_at: "2026-01-01T00:00:00Z".to_string(),
+                archived: false,
+            },
+        ];
+
+        let merged = merge_shopping_lists(&pri_lists, &sec_lists, &deleted_lists, &deleted_items);
+        // list-2 was deleted, so shouldn't be present
+        assert_eq!(merged.len(), 1);
+        assert_eq!(merged[0].id, "list-1");
+        // item-2 was deleted, so shouldn't be present
+        assert_eq!(merged[0].items.len(), 1);
+        assert_eq!(merged[0].items[0].id, "item-1");
+    }
+
+    #[test]
+    fn test_merge_notes_respects_deleted_notes() {
+        let mut deleted_notes = HashSet::new();
+        deleted_notes.insert("note-deleted".to_string());
+
+        let pri_notes = vec![Note {
+            id: "note-1".to_string(),
+            title: "Receta".to_string(),
+            content: "Paella".to_string(),
+            color: "#fff".to_string(),
+            pinned: false,
+            created_at: "2026-01-01T00:00:00Z".to_string(),
+            updated_at: "2026-01-01T00:00:00Z".to_string(),
+            archived: false,
+        }];
+
+        let sec_notes = vec![
+            Note {
+                id: "note-1".to_string(),
+                title: "Receta".to_string(),
+                content: "Paella Valenciana".to_string(),
+                color: "#fff".to_string(),
+                pinned: false,
+                created_at: "2026-01-01T00:00:00Z".to_string(),
+                updated_at: "2026-01-02T00:00:00Z".to_string(),
+                archived: false,
+            },
+            Note {
+                id: "note-deleted".to_string(),
+                title: "Borrada".to_string(),
+                content: "...".to_string(),
+                color: "#fff".to_string(),
+                pinned: false,
+                created_at: "2026-01-01T00:00:00Z".to_string(),
+                updated_at: "2026-01-01T00:00:00Z".to_string(),
+                archived: false,
+            },
+        ];
+
+        let merged = merge_notes(&pri_notes, &sec_notes, &deleted_notes);
+        assert_eq!(merged.len(), 1);
+        assert_eq!(merged[0].id, "note-1");
+        assert_eq!(merged[0].content, "Paella Valenciana");
+    }
+
+    #[test]
+    fn test_merge_catalog_respects_deleted_catalog() {
+        let mut deleted_cat = HashSet::new();
+        deleted_cat.insert("cat-del".to_string());
+
+        let pri_cat = vec![ProductCatalogItem {
+            id: "cat-1".to_string(),
+            name: "Manzana".to_string(),
+            keywords: vec![],
+            emoji: "🍎".to_string(),
+            category: "Fruta".to_string(),
+        }];
+
+        let sec_cat = vec![
+            ProductCatalogItem {
+                id: "cat-1".to_string(),
+                name: "Manzana".to_string(),
+                keywords: vec![],
+                emoji: "🍎".to_string(),
+                category: "Fruta".to_string(),
+            },
+            ProductCatalogItem {
+                id: "cat-del".to_string(),
+                name: "Pera".to_string(),
+                keywords: vec![],
+                emoji: "🍐".to_string(),
+                category: "Fruta".to_string(),
+            },
+        ];
+
+        let merged = merge_catalog(&pri_cat, &sec_cat, &deleted_cat);
+        assert_eq!(merged.len(), 1);
+        assert_eq!(merged[0].id, "cat-1");
+    }
 }

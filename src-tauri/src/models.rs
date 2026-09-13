@@ -142,6 +142,14 @@ pub struct VaultData {
     pub members: Vec<FamilyMember>,
     #[serde(default)]
     pub deleted_member_ids: Vec<String>,
+    #[serde(default)]
+    pub deleted_list_ids: Vec<String>,
+    #[serde(default)]
+    pub deleted_item_ids: Vec<String>,
+    #[serde(default)]
+    pub deleted_note_ids: Vec<String>,
+    #[serde(default)]
+    pub deleted_catalog_ids: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
