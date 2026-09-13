@@ -1,7 +1,25 @@
-import React, { useState } from "react";
-import { Plus, Trash2, Pin, Search, Archive, ArchiveRestore } from "lucide-react";
+import React, { useState, useRef } from "react";
+import {
+  Plus,
+  Trash2,
+  Pin,
+  Search,
+  Archive,
+  ArchiveRestore,
+  Bold,
+  Italic,
+  Heading,
+  List,
+  ListTodo,
+  Code,
+  Quote,
+  Eye,
+  Edit3,
+  Columns,
+} from "lucide-react";
 import { Note } from "../types";
 import { useTranslation } from "../context/LanguageContext";
+import { MarkdownContent } from "./MarkdownContent";
 
 interface NotesViewProps {
   notes: Note[];
@@ -23,8 +41,29 @@ export const NotesView: React.FC<NotesViewProps> = ({
   const [showArchived, setShowArchived] = useState(false);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editorTab, setEditorTab] = useState<"edit" | "preview" | "split">("edit");
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [pendingDeleteNote, setPendingDeleteNote] = useState<Note | null>(null);
   const [lastDeletedNote, setLastDeletedNote] = useState<Note | null>(null);
+
+  const insertMarkdown = (prefix: string, suffix = "") => {
+    const textarea = textareaRef.current;
+    if (!textarea || !editingNote) return;
+    const start = textarea.selectionStart ?? 0;
+    const end = textarea.selectionEnd ?? 0;
+    const text = editingNote.content;
+    const selected = text.substring(start, end);
+    const replacement = prefix + (selected || "") + suffix;
+    const newContent = text.substring(0, start) + replacement + text.substring(end);
+    setEditingNote({ ...editingNote, content: newContent });
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(
+        start + prefix.length,
+        start + prefix.length + selected.length
+      );
+    }, 0);
+  };
 
   const activeNotes = notes.filter((n) => !n.archived);
   const archivedNotes = notes.filter((n) => !!n.archived);
@@ -58,11 +97,13 @@ export const NotesView: React.FC<NotesViewProps> = ({
       createdAt: "",
       updatedAt: "",
     });
+    setEditorTab("edit");
     setIsModalOpen(true);
   };
 
   const handleOpenEdit = (note: Note) => {
     setEditingNote(note);
+    setEditorTab("edit");
     setIsModalOpen(true);
   };
 
@@ -159,9 +200,10 @@ export const NotesView: React.FC<NotesViewProps> = ({
                       <Pin size={14} className="text-amber-500 fill-amber-500 shrink-0" />
                     )}
                   </div>
-                  <p className="text-xs text-slate-600 dark:text-slate-300 whitespace-pre-wrap line-clamp-6 font-normal">
-                    {note.content}
-                  </p>
+                  <div className="max-h-40 overflow-hidden relative text-xs font-normal">
+                    <MarkdownContent content={note.content} isCompact={true} />
+                    <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-white dark:from-slate-900 to-transparent pointer-events-none opacity-80" />
+                  </div>
                 </div>
 
                 <div className="flex items-center justify-end pt-2 border-t border-slate-100 dark:border-slate-800/80 text-[10px] text-slate-400 dark:text-slate-500">
@@ -212,9 +254,10 @@ export const NotesView: React.FC<NotesViewProps> = ({
                       {t("notes.archivedTag")}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 whitespace-pre-wrap line-clamp-5 font-normal">
-                    {note.content}
-                  </p>
+                  <div className="max-h-36 overflow-hidden relative text-xs font-normal opacity-85">
+                    <MarkdownContent content={note.content} isCompact={true} />
+                    <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-slate-50 dark:from-slate-950 to-transparent pointer-events-none opacity-90" />
+                  </div>
                 </div>
 
                 <div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-800/80 text-xs">
@@ -383,18 +426,151 @@ export const NotesView: React.FC<NotesViewProps> = ({
             </div>
 
             <div className="flex-1 flex flex-col min-h-0 pb-1">
-              <label className="text-[11px] text-slate-500 dark:text-slate-400 font-bold block mb-2">
-                {t("notes.noteContentLabel")}
-              </label>
-              <div className="flex-1 rounded-xl border border-slate-300 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2 mb-2 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/30 transition-all">
-                <textarea
-                  placeholder={t("notes.noteContentPlaceholder")}
-                  value={editingNote.content}
-                  onChange={(e) =>
-                    setEditingNote({ ...editingNote, content: e.target.value })
-                  }
-                  className="flex-1 w-full min-h-[260px] bg-transparent text-xs text-slate-900 dark:text-white font-mono resize-none border-0 outline-none p-1"
-                />
+              <div className="flex items-center justify-between mb-1.5 shrink-0">
+                <label className="text-[11px] text-slate-500 dark:text-slate-400 font-bold">
+                  {t("notes.noteContentLabel")}{" "}
+                  <span className="font-normal text-[10px] text-slate-400 dark:text-slate-500">
+                    ({t("notes.markdownSupported")})
+                  </span>
+                </label>
+
+                {/* View Tabs */}
+                <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg text-[11px]">
+                  <button
+                    type="button"
+                    onClick={() => setEditorTab("edit")}
+                    className={`flex items-center gap-1 px-2 py-0.5 rounded-md font-medium transition cursor-pointer ${
+                      editorTab === "edit"
+                        ? "bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-xs"
+                        : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                    }`}
+                  >
+                    <Edit3 size={12} />
+                    <span>{t("notes.tabEdit")}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditorTab("preview")}
+                    className={`flex items-center gap-1 px-2 py-0.5 rounded-md font-medium transition cursor-pointer ${
+                      editorTab === "preview"
+                        ? "bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-xs"
+                        : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                    }`}
+                  >
+                    <Eye size={12} />
+                    <span>{t("notes.tabPreview")}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditorTab("split")}
+                    className={`hidden md:flex items-center gap-1 px-2 py-0.5 rounded-md font-medium transition cursor-pointer ${
+                      editorTab === "split"
+                        ? "bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-xs"
+                        : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                    }`}
+                  >
+                    <Columns size={12} />
+                    <span>{t("notes.tabSplit")}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Markdown Quick Toolbar (visible in edit and split modes) */}
+              {editorTab !== "preview" && (
+                <div className="flex items-center gap-1 py-1 px-2 mb-1.5 bg-slate-100 dark:bg-slate-800/80 rounded-lg text-slate-600 dark:text-slate-300 overflow-x-auto shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => insertMarkdown("## ")}
+                    className="p-1 hover:bg-white dark:hover:bg-slate-700 rounded transition cursor-pointer"
+                    title={t("notes.toolbarHeading")}
+                  >
+                    <Heading size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => insertMarkdown("**", "**")}
+                    className="p-1 hover:bg-white dark:hover:bg-slate-700 rounded transition cursor-pointer"
+                    title={t("notes.toolbarBold")}
+                  >
+                    <Bold size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => insertMarkdown("*", "*")}
+                    className="p-1 hover:bg-white dark:hover:bg-slate-700 rounded transition cursor-pointer"
+                    title={t("notes.toolbarItalic")}
+                  >
+                    <Italic size={14} />
+                  </button>
+                  <div className="h-3 w-px bg-slate-300 dark:bg-slate-700 mx-0.5" />
+                  <button
+                    type="button"
+                    onClick={() => insertMarkdown("- ")}
+                    className="p-1 hover:bg-white dark:hover:bg-slate-700 rounded transition cursor-pointer"
+                    title={t("notes.toolbarList")}
+                  >
+                    <List size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => insertMarkdown("- [ ] ")}
+                    className="p-1 hover:bg-white dark:hover:bg-slate-700 rounded transition cursor-pointer"
+                    title={t("notes.toolbarChecklist")}
+                  >
+                    <ListTodo size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => insertMarkdown("> ")}
+                    className="p-1 hover:bg-white dark:hover:bg-slate-700 rounded transition cursor-pointer"
+                    title={t("notes.toolbarQuote")}
+                  >
+                    <Quote size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => insertMarkdown("`", "`")}
+                    className="p-1 hover:bg-white dark:hover:bg-slate-700 rounded transition cursor-pointer"
+                    title={t("notes.toolbarCode")}
+                  >
+                    <Code size={14} />
+                  </button>
+                </div>
+              )}
+
+              {/* Editor / Preview Content Area */}
+              <div className="flex-1 flex min-h-0 gap-3">
+                {/* Editor Textarea */}
+                {(editorTab === "edit" || editorTab === "split") && (
+                  <div className={`flex-1 flex flex-col rounded-xl border border-slate-300 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/30 transition-all ${
+                    editorTab === "split" ? "w-1/2" : "w-full"
+                  }`}>
+                    <textarea
+                      ref={textareaRef}
+                      placeholder={t("notes.noteContentPlaceholder")}
+                      value={editingNote.content}
+                      onChange={(e) =>
+                        setEditingNote({ ...editingNote, content: e.target.value })
+                      }
+                      className="flex-1 w-full bg-transparent text-xs text-slate-900 dark:text-white font-mono resize-none border-0 outline-none p-1 overflow-y-auto"
+                    />
+                  </div>
+                )}
+
+                {/* Preview Area */}
+                {(editorTab === "preview" || editorTab === "split") && (
+                  <div className={`flex-1 overflow-y-auto rounded-xl border border-slate-300 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-4 ${
+                    editorTab === "split" ? "w-1/2" : "w-full"
+                  }`}>
+                    {editingNote.content.trim() ? (
+                      <MarkdownContent content={editingNote.content} />
+                    ) : (
+                      <p className="text-xs text-slate-400 dark:text-slate-500 italic">
+                        {t("notes.previewEmpty")}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
