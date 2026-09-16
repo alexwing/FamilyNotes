@@ -97,6 +97,8 @@ const Api = {
     invoke<VaultSnapshot>("register_family_member", { name, deviceId }),
   reorderShoppingLists: (listIds: string[]) =>
     invoke<VaultSnapshot>("reorder_shopping_lists", { listIds }),
+  reorderNotes: (noteIds: string[]) =>
+    invoke<VaultSnapshot>("reorder_notes", { noteIds }),
 };
 
 export default Api;

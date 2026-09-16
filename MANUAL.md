@@ -26,7 +26,10 @@ Welcome to the **FamilyNotes User Manual**. This comprehensive guide walks you t
 7. [Instant QR Code Device Pairing](#7-instant-qr-code-device-pairing)
    - [Why the Master Password is Never in the QR](#why-the-master-password-is-never-in-the-qr)
    - [Step-by-Step Pairing Workflow](#step-by-step-pairing-workflow)
-8. [Private Cloud Sync (FTP / FTPS)](#8-private-cloud-sync-ftp--ftps)
+8. [Private Cloud Sync (FTP / FTPS) & Smart Merge](#8-private-cloud-sync-ftp--ftps--smart-merge)
+   - [Supported Protocols & Background Sync](#supported-protocols--background-sync)
+   - [Deterministic Tombstone Merge (Preventing Zombie Items)](#deterministic-tombstone-merge-preventing-zombie-items)
+   - [Conflict-Free Merging of Concurrent Edits](#conflict-free-merging-of-concurrent-edits)
 9. [Preferences, Themes & Internationalization](#9-preferences-themes--internationalization)
 
 ---
@@ -201,16 +204,41 @@ Connecting a new family phone or tablet takes just seconds using the built-in se
 
 ---
 
-## 8. Private Cloud Sync (FTP / FTPS)
+## 8. Private Cloud Sync (FTP / FTPS) & Smart Merge
 
-FamilyNotes uses a non-proprietary FTP backend so you can host your data anywhere:
-- **Supported Protocols**: Standard **FTP** (Port 21) and secure **FTPS** (Explicit TLS).
+FamilyNotes uses a standard, non-proprietary FTP/FTPS backend so you can host your data anywhere with complete autonomy:
+
+### Supported Protocols & Background Sync
+- **Protocols**: Standard **FTP** (Port 21) and secure **FTPS** (Explicit TLS).
 - **Background Synchronization**:
-  - Automatically triggers after a few seconds of inactivity following edits.
-  - Automatically syncs when the window regains focus.
+  - Automatically triggers after a few seconds of inactivity following edits (debounced).
+  - Automatically syncs when the window or app regains focus.
   - Automatically syncs upon application launch.
 - **Manual Sync**: Tap the **Sync (🔄)** icon in the top header anytime for an immediate bidirectional refresh.
-- **Conflict-Free Merging**: If two family members check off items simultaneously while offline, both sets of changes are safely merged without data loss.
+
+### Deterministic Tombstone Merge (Preventing Zombie Items)
+In decentralized zero-knowledge synchronization, a common pitfall is the **"zombie item"** problem: if User A deletes an item while User B is offline, a naive merge would see that User B still has the item and re-add ("resurrect") it to User A's list.
+
+FamilyNotes solves this with an encrypted **Tombstone Deletion Tracking** algorithm:
+
+1. **Tombstone Union**:
+   - Whenever any entity is deleted locally, its unique identifier is recorded into dedicated tombstone collections in the vault (`deleted_list_ids`, `deleted_item_ids`, `deleted_note_ids`, `deleted_catalog_ids`, `deleted_history_items`, and `deleted_member_ids`).
+   - When synchronizing with the FTP server (`sync_now`), the application downloads and decrypts the remote vault. It then computes the union of both local and remote tombstone sets, ensuring no deletion event is lost.
+
+2. **Pre-Merge Filtering**:
+   - **Before** merging lists, items, notes, or products, FamilyNotes filters both local and remote collections against the consolidated tombstone set.
+   - Any item, note, list, or catalog entry whose ID is marked as deleted is immediately discarded. This guarantees that deleted items can never be resurrected by an older remote vault.
+
+3. **Encrypted Propagation**:
+   - The unified tombstone set is sealed directly into the local vault data.
+   - The newly merged snapshot is encrypted using **XChaCha20-Poly1305** and uploaded back to the FTP server.
+   - When other family devices perform their next synchronization, they download the updated vault, absorb the tombstones, and automatically purge the deleted items from their local copies.
+
+### Conflict-Free Merging of Concurrent Edits
+- **Shopping Lists & Items**: Products added or checked off on different devices concurrently are merged without data loss. If an item was toggled to purchased on one device while another item was added to the same list on a different device, both actions are preserved.
+- **Family Notes**: Notes created or modified on different devices are merged by timestamp and note ID. Pinned states are respected.
+- **Product Dictionary & History**: Custom products added to the family catalog or new purchase records are safely aggregated into the shared vault.
+- **Remote Revocation**: If a device ID is revoked in the family members list, that revocation tombstone is propagated to immediately lock out the unauthorized device upon its next sync.
 
 ---
 

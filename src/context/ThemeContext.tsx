@@ -39,10 +39,27 @@ const applyDarkClass = (dark: boolean) => {
   }
 };
 
+const STORAGE_KEY = "familynotes_theme";
+
+const getStoredTheme = (): ThemeMode => {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved && VALID_MODES.includes(saved as ThemeMode)) {
+      return saved as ThemeMode;
+    }
+  } catch {}
+  return "system";
+};
+
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [mode, setModeState] = useState<ThemeMode>("system");
-  const [isDark, setIsDark] = useState<boolean>(() => resolveDark("system"));
-  const modeRef = useRef<ThemeMode>("system");
+  const [mode, setModeState] = useState<ThemeMode>(getStoredTheme);
+  const [isDark, setIsDark] = useState<boolean>(() => {
+    const initial = getStoredTheme();
+    const dark = resolveDark(initial);
+    applyDarkClass(dark);
+    return dark;
+  });
+  const modeRef = useRef<ThemeMode>(getStoredTheme());
 
   const apply = useCallback((m: ThemeMode) => {
     const dark = resolveDark(m);
@@ -54,14 +71,30 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      let chosen: ThemeMode = "system";
+      let chosen: ThemeMode = getStoredTheme();
       try {
+        const rawStored = (() => {
+          try {
+            return localStorage.getItem(STORAGE_KEY);
+          } catch {
+            return null;
+          }
+        })();
+
         const prefs = await Api.getPreferences();
-        if (prefs?.theme && VALID_MODES.includes(prefs.theme as ThemeMode)) {
+        if (rawStored && VALID_MODES.includes(rawStored as ThemeMode)) {
+          chosen = rawStored as ThemeMode;
+          if (prefs && prefs.theme !== chosen) {
+            await Api.savePreferences({ ...prefs, theme: chosen });
+          }
+        } else if (prefs?.theme && VALID_MODES.includes(prefs.theme as ThemeMode)) {
           chosen = prefs.theme as ThemeMode;
+          try {
+            localStorage.setItem(STORAGE_KEY, chosen);
+          } catch {}
         }
       } catch {
-        chosen = "system";
+        chosen = getStoredTheme();
       }
       if (cancelled) return;
       modeRef.current = chosen;
@@ -88,6 +121,9 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const setMode = useCallback(
     (m: ThemeMode) => {
+      try {
+        localStorage.setItem(STORAGE_KEY, m);
+      } catch {}
       modeRef.current = m;
       setModeState(m);
       apply(m);

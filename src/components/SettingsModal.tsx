@@ -157,7 +157,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   const handleUpdateDeviceName = async () => {
-    const updated = { ...preferences, currentDeviceName: deviceName.trim() };
+    const updated = { ...preferences, currentDeviceName: deviceName.trim(), language };
     await Api.savePreferences(updated);
     onSavePreferences(updated);
     onShowToast(t("settings.general.deviceSaved"), "📱");
@@ -298,9 +298,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       <button
                         key={item.id}
                         type="button"
-                        onClick={() => {
+                        onClick={async () => {
                           setMode(item.id);
-                          onSavePreferences({ ...preferences, theme: item.id });
+                          const updated = { ...preferences, theme: item.id };
+                          onSavePreferences(updated);
+                          try {
+                            await Api.savePreferences(updated);
+                          } catch (e) {
+                            console.error("Failed to save theme preference:", e);
+                          }
                         }}
                         className={`flex flex-col items-center justify-center p-3 rounded-xl border font-bold text-xs gap-1.5 transition cursor-pointer ${
                           isSelected
@@ -339,9 +345,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       <button
                         key={item.id}
                         type="button"
-                        onClick={() => {
+                        onClick={async () => {
                           setLanguage(item.id);
-                          onSavePreferences({ ...preferences, language: item.id });
+                          const updated = { ...preferences, language: item.id };
+                          onSavePreferences(updated);
+                          try {
+                            await Api.savePreferences(updated);
+                          } catch (e) {
+                            console.error("Failed to save language preference:", e);
+                          }
                         }}
                         className={`flex flex-col items-center justify-center p-3 rounded-xl border font-bold text-xs gap-1.5 transition cursor-pointer ${
                           isSelected

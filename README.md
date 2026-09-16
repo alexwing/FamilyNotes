@@ -55,9 +55,13 @@
 - **No Third-Party Reliance**: Master passwords never leave your hardware; all decryption happens strictly inside device memory.
 - **Protected Startup**: Clean splash loader with smooth automatic unlocking when credentials are saved locally, preventing password prompt flickering.
 
-### 📡 Private FTP Cloud Sync
+### 📡 Private FTP Cloud Sync & Smart Merge
 - **Intelligent Background Sync**: Automatically synchronizes after a few seconds of inactivity, upon losing window focus, or when relaunching the app.
-- **Conflict-Free Bidirectional Merge**: Smart merge algorithm preserving changes made concurrently across different family devices (lists, notes, history, and catalog).
+- **Deterministic Tombstone Deletion Tracking**: Prevents "zombie items" (deleted items or notes resurrecting from another family device) through robust cryptographic deletion logging:
+  - **Tombstone Union**: Deletion logs (`deleted_list_ids`, `deleted_item_ids`, `deleted_note_ids`, `deleted_catalog_ids`, `deleted_history_items`, `deleted_member_ids`) from local and remote vaults are united into a consolidated set.
+  - **Pre-Merge Filtering**: Before merging any lists, items, notes, or custom products, any entity present in the unified tombstone set is filtered out and discarded from both sides.
+  - **Encrypted Propagation**: The unified set of deleted IDs is stored inside the encrypted vault payload (`.fnvault`) and re-uploaded to the FTP server, reliably propagating deletions to all family devices.
+- **Conflict-Free Bidirectional Merge**: Safely merges concurrent additions, status toggles, and updates made across family devices (lists, notes, history, and custom catalog).
 - **Family Device Management**: Inspect all registered devices. Revoke any lost or unused device remotely, locking it out until the master password is re-entered.
 - **Instant QR Code Pairing**: Scan a secure QR code generated on an existing device to connect new phones or tablets in seconds.
 
@@ -134,7 +138,7 @@ The resulting universal release APK will be located at:
                               v
 +-------------------------------------------------------------+
 |                  Encrypted Vault Payload                    |
-|           (Shopping Lists + Notes + History + Members)      |
+|       (Shopping Lists + Notes + History + Members + Deletions) |
 +-------------------------------------------------------------+
                               |
                      Local Storage & FTP Sync
@@ -143,6 +147,7 @@ The resulting universal release APK will be located at:
 1. **Key Derivation**: The master password is processed through **Argon2id** (GPU/ASIC-resistant KDF) with a unique 16-byte salt stored in the vault header.
 2. **Data Encryption**: The JSON payload is encrypted using **XChaCha20-Poly1305** authenticated cipher with a 24-byte nonce to guarantee absolute confidentiality and cryptographic integrity.
 3. **Zero-Knowledge Cloud**: Even if the FTP server is intercepted or compromised, attackers cannot read vault contents without the master password.
+4. **Decentralized Tombstone Tracking**: Deletion logs are encrypted alongside user data, ensuring deletions securely propagate to other offline devices without leaking entity identifiers.
 
 ---
 

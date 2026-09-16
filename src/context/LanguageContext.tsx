@@ -9,6 +9,19 @@ export interface LanguageContextValue {
   t: (key: string, vars?: Record<string, string | number>) => string;
 }
 
+const STORAGE_KEY = "familynotes_language";
+const VALID_LANGUAGES: LanguageSetting[] = ["system", "es", "en"];
+
+const getStoredLanguage = (): LanguageSetting => {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved && VALID_LANGUAGES.includes(saved as LanguageSetting)) {
+      return saved as LanguageSetting;
+    }
+  } catch {}
+  return "system";
+};
+
 export const LanguageContext = createContext<LanguageContextValue>({
   language: "system",
   resolved: "es",
@@ -18,27 +31,55 @@ export const LanguageContext = createContext<LanguageContextValue>({
 
 export const useTranslation = () => useContext(LanguageContext);
 
-const VALID_LANGUAGES: LanguageSetting[] = ["system", "es", "en"];
-
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [language, setLanguageState] = useState<LanguageSetting>("system");
-  const [resolved, setResolved] = useState<SupportedLanguage>(resolveLanguage("system"));
+  // Synchronous initialization from localStorage prevents initial flash or race condition
+  const [language, setLanguageState] = useState<LanguageSetting>(getStoredLanguage);
+  const [resolved, setResolved] = useState<SupportedLanguage>(() =>
+    resolveLanguage(getStoredLanguage())
+  );
 
+  // Sync with backend preferences on mount
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      let chosen: LanguageSetting = "system";
       try {
+        const rawStored = (() => {
+          try {
+            return localStorage.getItem(STORAGE_KEY);
+          } catch {
+            return null;
+          }
+        })();
+
         const prefs = await Api.getPreferences();
-        if (prefs?.language && VALID_LANGUAGES.includes(prefs.language as LanguageSetting)) {
-          chosen = prefs.language as LanguageSetting;
+
+        // If localStorage has an explicit user choice, ensure backend matches
+        if (rawStored && VALID_LANGUAGES.includes(rawStored as LanguageSetting)) {
+          const storedLang = rawStored as LanguageSetting;
+          if (prefs && prefs.language !== storedLang) {
+            await Api.savePreferences({ ...prefs, language: storedLang });
+          }
+          if (!cancelled) {
+            setLanguageState(storedLang);
+            setResolved(resolveLanguage(storedLang));
+          }
+          return;
         }
-      } catch {
-        chosen = "system";
+
+        // If localStorage has not been set yet, check backend preferences
+        if (prefs?.language && VALID_LANGUAGES.includes(prefs.language as LanguageSetting)) {
+          const chosen = prefs.language as LanguageSetting;
+          if (!cancelled) {
+            setLanguageState(chosen);
+            setResolved(resolveLanguage(chosen));
+            try {
+              localStorage.setItem(STORAGE_KEY, chosen);
+            } catch {}
+          }
+        }
+      } catch (e) {
+        console.warn("Could not sync language with preferences:", e);
       }
-      if (cancelled) return;
-      setLanguageState(chosen);
-      setResolved(resolveLanguage(chosen));
     })();
     return () => {
       cancelled = true;
@@ -46,6 +87,9 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, []);
 
   const setLanguage = useCallback((lang: LanguageSetting) => {
+    try {
+      localStorage.setItem(STORAGE_KEY, lang);
+    } catch {}
     setLanguageState(lang);
     setResolved(resolveLanguage(lang));
     (async () => {

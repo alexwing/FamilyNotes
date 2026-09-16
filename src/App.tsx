@@ -299,6 +299,23 @@ export function App() {
           }
         }
 
+        try {
+          const storedLang = localStorage.getItem("familynotes_language");
+          if (storedLang && ["system", "es", "en"].includes(storedLang)) {
+            if (prefs.language !== storedLang) {
+              prefs.language = storedLang as any;
+              prefsNeedSave = true;
+            }
+          }
+          const storedTheme = localStorage.getItem("familynotes_theme");
+          if (storedTheme && ["system", "light", "dark"].includes(storedTheme)) {
+            if (prefs.theme !== storedTheme) {
+              prefs.theme = storedTheme as any;
+              prefsNeedSave = true;
+            }
+          }
+        } catch {}
+
         if (prefsNeedSave) {
           await Api.savePreferences(prefs);
         }
@@ -508,8 +525,15 @@ export function App() {
           : v
       );
 
+      let effectiveLang = preferences.language;
+      try {
+        const stored = localStorage.getItem("familynotes_language");
+        if (stored) effectiveLang = stored as any;
+      } catch {}
+
       const updatedPrefs: Preferences = {
         ...preferences,
+        language: effectiveLang,
         savedMasterPassword: manualUnlockPassword,
         vaults: updatedVaults,
       };
@@ -688,6 +712,21 @@ export function App() {
       setIsOnboardingOpen(true);
     }
   };
+
+  const handleSavePreferences = useCallback(async (updatedPrefs: Preferences) => {
+    setPreferences(updatedPrefs);
+    try {
+      if (updatedPrefs.language) {
+        localStorage.setItem("familynotes_language", updatedPrefs.language);
+      }
+      if (updatedPrefs.theme) {
+        localStorage.setItem("familynotes_theme", updatedPrefs.theme);
+      }
+      await Api.savePreferences(updatedPrefs);
+    } catch (e) {
+      console.error("Failed to save preferences:", e);
+    }
+  }, []);
 
   // Catalog / Dictionary Operations
   const handleUpsertCatalogItem = async (item: ProductCatalogItem) => {
@@ -1159,6 +1198,34 @@ export function App() {
     }
   };
 
+  const handleReorderNotes = async (noteIds: string[]) => {
+    try {
+      setVaultData((prev) => {
+        if (!prev) return prev;
+        const map = new Map(prev.notes.map((n) => [n.id, n]));
+        const reordered: Note[] = [];
+        for (const id of noteIds) {
+          const n = map.get(id);
+          if (n) {
+            reordered.push(n);
+            map.delete(id);
+          }
+        }
+        for (const n of map.values()) {
+          reordered.push(n);
+        }
+        return { ...prev, notes: reordered };
+      });
+
+      const snap = await Api.reorderNotes(noteIds);
+      await persistVaultFile(snap.contents);
+      scheduleDebouncedSync();
+    } catch (e) {
+      console.error("Reorder notes error:", e);
+      await refreshVaultData();
+    }
+  };
+
   // Manual Sync
   const handleManualSync = async () => {
     if (syncTimeoutRef.current) {
@@ -1350,6 +1417,7 @@ export function App() {
             onDeleteNote={handleDeleteNote}
             onArchiveNote={handleArchiveNote}
             onUnarchiveNote={handleUnarchiveNote}
+            onReorderNotes={handleReorderNotes}
           />
         )}
 
@@ -1392,7 +1460,7 @@ export function App() {
         }
         onSaveSync={handleSaveSync}
         preferences={preferences}
-        onSavePreferences={setPreferences}
+        onSavePreferences={handleSavePreferences}
         vaultData={vaultData}
         onShowToast={showToast}
         onDeleteDevice={handleDeleteFamilyMember}

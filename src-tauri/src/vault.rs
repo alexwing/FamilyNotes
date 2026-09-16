@@ -168,6 +168,7 @@ fn seed_sample_data(device_name: &str, device_id: &str) -> VaultData {
                 created_at: now.clone(),
                 updated_at: now.clone(),
                 archived: false,
+                tags: vec!["Recetas".to_string(), "Cocina".to_string()],
             },
             Note {
                 id: Uuid::new_v4().to_string(),
@@ -178,6 +179,7 @@ fn seed_sample_data(device_name: &str, device_id: &str) -> VaultData {
                 created_at: now.clone(),
                 updated_at: now.clone(),
                 archived: false,
+                tags: vec!["Hogar".to_string(), "Tareas".to_string()],
             },
         ],
         purchase_history: vec![
@@ -1260,6 +1262,26 @@ pub fn reorder_shopping_lists(
     mgr.seal_current()
 }
 
+#[tauri::command]
+pub fn reorder_notes(
+    note_ids: Vec<String>,
+    state: State<'_, VaultState>,
+) -> Result<VaultSnapshot, String> {
+    let mut mgr = state.lock().map_err(|_| "mutex_lock_failed")?;
+    let data = mgr.data.as_mut().ok_or_else(|| "vault_locked".to_string())?;
+
+    let mut new_notes = Vec::with_capacity(data.notes.len());
+    for id in &note_ids {
+        if let Some(idx) = data.notes.iter().position(|n| &n.id == id) {
+            new_notes.push(data.notes.remove(idx));
+        }
+    }
+    new_notes.append(&mut data.notes);
+    data.notes = new_notes;
+    data.revision += 1;
+    mgr.seal_current()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1369,6 +1391,7 @@ mod tests {
             created_at: "2026-01-01T00:00:00Z".to_string(),
             updated_at: "2026-01-01T00:00:00Z".to_string(),
             archived: false,
+            tags: vec!["Cocina".to_string()],
         }];
 
         let sec_notes = vec![
@@ -1381,6 +1404,7 @@ mod tests {
                 created_at: "2026-01-01T00:00:00Z".to_string(),
                 updated_at: "2026-01-02T00:00:00Z".to_string(),
                 archived: false,
+                tags: vec!["Cocina".to_string()],
             },
             Note {
                 id: "note-deleted".to_string(),
@@ -1391,6 +1415,7 @@ mod tests {
                 created_at: "2026-01-01T00:00:00Z".to_string(),
                 updated_at: "2026-01-01T00:00:00Z".to_string(),
                 archived: false,
+                tags: vec![],
             },
         ];
 
@@ -1434,4 +1459,56 @@ mod tests {
         assert_eq!(merged.len(), 1);
         assert_eq!(merged[0].id, "cat-1");
     }
+
+    #[test]
+    fn test_reorder_notes_logic() {
+        let mut notes = vec![
+            Note {
+                id: "note-1".to_string(),
+                title: "N1".to_string(),
+                content: "".to_string(),
+                color: "".to_string(),
+                pinned: false,
+                created_at: "".to_string(),
+                updated_at: "".to_string(),
+                archived: false,
+                tags: vec![],
+            },
+            Note {
+                id: "note-2".to_string(),
+                title: "N2".to_string(),
+                content: "".to_string(),
+                color: "".to_string(),
+                pinned: false,
+                created_at: "".to_string(),
+                updated_at: "".to_string(),
+                archived: false,
+                tags: vec![],
+            },
+            Note {
+                id: "note-3".to_string(),
+                title: "N3".to_string(),
+                content: "".to_string(),
+                color: "".to_string(),
+                pinned: false,
+                created_at: "".to_string(),
+                updated_at: "".to_string(),
+                archived: false,
+                tags: vec![],
+            },
+        ];
+
+        let reorder_ids = vec!["note-3".to_string(), "note-1".to_string()];
+        let mut new_notes = Vec::with_capacity(notes.len());
+        for id in &reorder_ids {
+            if let Some(idx) = notes.iter().position(|n| &n.id == id) {
+                new_notes.push(notes.remove(idx));
+            }
+        }
+        new_notes.append(&mut notes);
+        assert_eq!(new_notes[0].id, "note-3");
+        assert_eq!(new_notes[1].id, "note-1");
+        assert_eq!(new_notes[2].id, "note-2");
+    }
 }
+

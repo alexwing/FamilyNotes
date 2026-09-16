@@ -31,6 +31,7 @@ export interface Note {
   createdAt: string;
   updatedAt: string;
   archived?: boolean;
+  tags?: string[];
 }
 
 export interface PurchaseHistoryItem {

@@ -46,6 +46,7 @@ pub fn run() {
             vault::delete_family_member,
             vault::register_family_member,
             vault::reorder_shopping_lists,
+            vault::reorder_notes,
             preferences::get_preferences,
             preferences::save_preferences,
         ])

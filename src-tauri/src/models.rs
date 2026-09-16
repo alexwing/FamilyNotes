@@ -65,6 +65,8 @@ pub struct Note {
     pub updated_at: String,
     #[serde(default)]
     pub archived: bool,
+    #[serde(default)]
+    pub tags: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

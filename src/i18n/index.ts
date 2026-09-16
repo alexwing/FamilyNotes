@@ -23,11 +23,20 @@ export const resolveLanguage = (
   if (setting && SUPPORTED_LANGUAGES.includes(setting as SupportedLanguage)) {
     return setting as SupportedLanguage;
   }
-  const nav =
-    typeof navigator !== "undefined"
-      ? (navigator.language || "").slice(0, 2).toLowerCase()
-      : "";
-  if (SUPPORTED_LANGUAGES.includes(nav as SupportedLanguage)) return nav as SupportedLanguage;
+  if (typeof navigator !== "undefined") {
+    const primary = (navigator.language || "").slice(0, 2).toLowerCase();
+    if (SUPPORTED_LANGUAGES.includes(primary as SupportedLanguage)) {
+      return primary as SupportedLanguage;
+    }
+    if (navigator.languages && navigator.languages.length > 0) {
+      for (const l of navigator.languages) {
+        const pref = l.slice(0, 2).toLowerCase() as SupportedLanguage;
+        if (SUPPORTED_LANGUAGES.includes(pref)) {
+          return pref;
+        }
+      }
+    }
+  }
   return DEFAULT_LANGUAGE;
 };
 
