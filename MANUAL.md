@@ -15,22 +15,27 @@ Welcome to the **FamilyNotes User Manual**. This comprehensive guide walks you t
    - [Purchasing & Clearing Items](#purchasing--clearing-items)
    - [Tab Reordering (Drag-and-Drop & Touch Long-Press)](#tab-reordering-drag-and-drop--touch-long-press)
    - [Archiving Lists](#archiving-lists)
-4. [Encrypted Family Notes](#4-encrypted-family-notes)
+4. [Family Tasks & Kanban Boards](#4-family-tasks--kanban-boards)
+   - [Dual Views: Kanban Board & Structured List](#dual-views-kanban-board--structured-list)
+   - [Customizing Columns & Statuses](#customizing-columns--statuses)
+   - [In-Place Quick Editing & Nudge Controls](#in-place-quick-editing--nudge-controls)
+   - [Jira-Style Card Detail ("Ficha de Tarea")](#jira-style-card-detail-ficha-de-tarea)
+5. [Encrypted Family Notes](#5-encrypted-family-notes)
    - [Creating & Editing Notes](#creating--editing-notes)
    - [Pinning Important Notes](#pinning-important-notes)
    - [Real-Time Search](#real-time-search)
-5. [Purchase History & Smart Suggestions](#5-purchase-history--smart-suggestions)
-6. [Family Devices Management](#6-family-devices-management)
+6. [Purchase History & Smart Suggestions](#6-purchase-history--smart-suggestions)
+7. [Family Devices Management](#7-family-devices-management)
    - [Viewing Connected Devices](#viewing-connected-devices)
    - [Remote Device Revocation](#remote-device-revocation)
-7. [Instant QR Code Device Pairing](#7-instant-qr-code-device-pairing)
+8. [Instant QR Code Device Pairing](#8-instant-qr-code-device-pairing)
    - [Why the Master Password is Never in the QR](#why-the-master-password-is-never-in-the-qr)
    - [Step-by-Step Pairing Workflow](#step-by-step-pairing-workflow)
-8. [Private Cloud Sync (FTP / FTPS) & Smart Merge](#8-private-cloud-sync-ftp--ftps--smart-merge)
+9. [Private Cloud Sync (FTP / FTPS) & Smart Merge](#9-private-cloud-sync-ftp--ftps--smart-merge)
    - [Supported Protocols & Background Sync](#supported-protocols--background-sync)
    - [Deterministic Tombstone Merge (Preventing Zombie Items)](#deterministic-tombstone-merge-preventing-zombie-items)
    - [Conflict-Free Merging of Concurrent Edits](#conflict-free-merging-of-concurrent-edits)
-9. [Preferences, Themes & Internationalization](#9-preferences-themes--internationalization)
+10. [Preferences, Themes & Internationalization](#10-preferences-themes--internationalization)
 
 ---
 
@@ -108,7 +113,47 @@ When a seasonal list (such as *Christmas Dinner* or *Summer Camping*) is no long
 
 ---
 
-## 4. Encrypted Family Notes
+## 4. Family Tasks & Kanban Boards
+
+FamilyNotes features an interactive, reliable **Task Management & Kanban** module designed to coordinate family to-dos, renovation projects, chore allocations, and travel preparations.
+
+### Dual Views: Kanban Board & Structured List
+Switch between visualization modes using the view toggle buttons in the top toolbar:
+- **Kanban Board**: Visual cards arranged across customizable status columns. Cards display task titles, priority badges, assigned members, due date status, and tags. Cards can be moved with native HTML5 drag-and-drop or using quick left/right nudge buttons for mobile ergonomics.
+- **Structured List / Table**: A tabular overview with structured columns (*Status*, *Title*, *Priority*, *Assignee*, *Due Date*, and *Actions*). Quickly alter status and priority dropdowns in-place directly from the row.
+
+### Customizing Columns & Statuses
+Task statuses represent the Kanban board columns. You can fully customize them via the **"Columns" (⚙️)** button:
+- **Add New Column**: Create columns tailored to your household (e.g. *Backlog*, *In Review*, *Blocked*, *Waiting For Delivery*).
+- **Color Palette & Ordering**: Assign distinct colors from an accessible palette and rearrange column order with Up/Down buttons.
+- **Completed Status Flag**: Mark columns as completed statuses (e.g. *Done* or *Finished*). Moving tasks into or out of these columns automatically adjusts the task's completion state.
+- **Safe Column Deletion**: To prevent losing data, if you delete a column containing active tasks, FamilyNotes prompts you to choose a fallback destination column to automatically reassign all existing tasks before the column is deleted.
+
+### Drag-and-Drop & Note Conversion in Kanban
+- **Drag-and-Drop Task Cards**: Move cards effortlessly across columns or reorder within a column. Columns highlight with visual drop targets and pulse indicators.
+- **Drag-and-Drop Vault Notes into Kanban**: Click the **"Notes" (📄)** button in the toolbar to reveal your vault notes in a side drawer. Drag any note directly into any Kanban column to instantly convert it into a task with the note's title, markdown content, and tags. Alternatively, click "+ [Column]" inside the drawer for 1-click conversion.
+- **One-Tap Completion**: Click the circle checkbox on any card or table row to immediately mark the task completed or send it back to the pending column.
+- **Mobile-Friendly Column Nudging**: On touchscreens or when you prefer not to drag, tap the `<` and `>` arrow buttons on cards to swiftly advance tasks to the adjacent column.
+
+### Tag Filtering & Instant Search
+- **Filter by Tag**: Use the Tag selector in the toolbar to display only tasks containing a specific tag (e.g. `#Urgente`, `#Compras`, `#Hogar`).
+- **Clickable Tag Chips**: Click any `#tag` badge directly on a Kanban card or table row to toggle filtering by that tag immediately.
+- **Active Tag Banner**: An active filter banner clearly displays the selected tag and matching task count, with an instant `(✕)` button to clear the filter.
+- **Search & Multi-Filters**: Combine tag filtering with status filters, priority filters, and keyword searches across titles, descriptions, and assignees.
+
+### Jira-Style Card Detail ("Ficha de Tarea")
+Clicking on any card or table row opens a focused, simplified Jira-style detail modal featuring:
+- **Title**: Clear task headline.
+- **Status & Priority**: Quick selectors with color-coded badges (Low 🟢, Medium 🔵, High 🟠, Urgent 🔴).
+- **Assignee**: Assign tasks to specific family members from a dropdown or enter a custom name.
+- **Due Date**: Date selector with automatic visual badges for **Due Today** (amber) and **Overdue** (red).
+- **Tags & Labels**: Add custom hashtag categories (e.g. `#Garden`, `#Car`, `#School`).
+- **Markdown Description with Live Preview**: Rich description editor supporting bold text, lists, and code blocks, with toggleable **Write** and **Preview** tabs.
+- **Timestamps**: Displays creation and last modification timestamps for accountability.
+
+---
+
+## 5. Encrypted Family Notes
 
 FamilyNotes includes a dedicated, encrypted notes repository for recipes, checklists, repair manuals, or private household credentials.
 
@@ -140,7 +185,7 @@ Use the top search bar (**"Search family notes..."**) to filter notes instantly 
 
 ---
 
-## 5. Purchase History & Smart Suggestions
+## 6. Purchase History & Smart Suggestions
 
 Every time items are checked off and cleared, FamilyNotes records the event in an encrypted local history log:
 - **Consumption Habits**: The app calculates how frequently products are bought.
@@ -149,7 +194,7 @@ Every time items are checked off and cleared, FamilyNotes records the event in a
 
 ---
 
-## 6. Family Devices Management
+## 7. Family Devices Management
 
 <p align="center">
   <img src="screenshots/05.png" width="400" alt="Family Devices Management" style="border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.25);" />
@@ -171,7 +216,7 @@ If a family smartphone is lost, stolen, or decommissioned:
 
 ---
 
-## 7. Instant QR Code Device Pairing
+## 8. Instant QR Code Device Pairing
 
 Connecting a new family phone or tablet takes just seconds using the built-in secure QR pairing system.
 
@@ -204,7 +249,7 @@ Connecting a new family phone or tablet takes just seconds using the built-in se
 
 ---
 
-## 8. Private Cloud Sync (FTP / FTPS) & Smart Merge
+## 9. Private Cloud Sync (FTP / FTPS) & Smart Merge
 
 FamilyNotes uses a standard, non-proprietary FTP/FTPS backend so you can host your data anywhere with complete autonomy:
 
@@ -222,12 +267,12 @@ In decentralized zero-knowledge synchronization, a common pitfall is the **"zomb
 FamilyNotes solves this with an encrypted **Tombstone Deletion Tracking** algorithm:
 
 1. **Tombstone Union**:
-   - Whenever any entity is deleted locally, its unique identifier is recorded into dedicated tombstone collections in the vault (`deleted_list_ids`, `deleted_item_ids`, `deleted_note_ids`, `deleted_catalog_ids`, `deleted_history_items`, and `deleted_member_ids`).
+   - Whenever any entity is deleted locally, its unique identifier is recorded into dedicated tombstone collections in the vault (`deleted_list_ids`, `deleted_item_ids`, `deleted_note_ids`, `deleted_catalog_ids`, `deleted_history_items`, `deleted_member_ids`, `deleted_task_ids`, and `deleted_task_status_ids`).
    - When synchronizing with the FTP server (`sync_now`), the application downloads and decrypts the remote vault. It then computes the union of both local and remote tombstone sets, ensuring no deletion event is lost.
 
 2. **Pre-Merge Filtering**:
-   - **Before** merging lists, items, notes, or products, FamilyNotes filters both local and remote collections against the consolidated tombstone set.
-   - Any item, note, list, or catalog entry whose ID is marked as deleted is immediately discarded. This guarantees that deleted items can never be resurrected by an older remote vault.
+   - **Before** merging lists, items, notes, tasks, or products, FamilyNotes filters both local and remote collections against the consolidated tombstone set.
+   - Any item, note, task, list, or catalog entry whose ID is marked as deleted is immediately discarded. This guarantees that deleted items can never be resurrected by an older remote vault.
 
 3. **Encrypted Propagation**:
    - The unified tombstone set is sealed directly into the local vault data.
@@ -236,13 +281,14 @@ FamilyNotes solves this with an encrypted **Tombstone Deletion Tracking** algori
 
 ### Conflict-Free Merging of Concurrent Edits
 - **Shopping Lists & Items**: Products added or checked off on different devices concurrently are merged without data loss. If an item was toggled to purchased on one device while another item was added to the same list on a different device, both actions are preserved.
+- **Family Tasks & Kanban**: Tasks added, edited, reordered, or moved between columns across devices are safely merged using timestamp comparisons, respecting deleted tombstones.
 - **Family Notes**: Notes created or modified on different devices are merged by timestamp and note ID. Pinned states are respected.
 - **Product Dictionary & History**: Custom products added to the family catalog or new purchase records are safely aggregated into the shared vault.
 - **Remote Revocation**: If a device ID is revoked in the family members list, that revocation tombstone is propagated to immediately lock out the unauthorized device upon its next sync.
 
 ---
 
-## 9. Preferences, Themes & Internationalization
+## 10. Preferences, Themes & Internationalization
 
 In **Settings (⚙️) > General**, customize your daily experience:
 
@@ -254,6 +300,19 @@ In **Settings (⚙️) > General**, customize your daily experience:
   - **🌐 System**: Automatically detects your device language.
   - **🇪🇸 Español**: Full Spanish localization.
   - **🇬🇧 English**: Full English localization.
+- **Vault Modules & Section Customization**:
+  - Customize which modules are enabled for the current vault: **Shopping lists**, **Family tasks (Kanban)**, **Family notes**, and **Purchase history**.
+  - Tailor vaults to your workflow (e.g., disable shopping and history for a dedicated notes/tasks vault, or disable tasks and notes for a shared grocery vault).
+  - Safety check: at least one tab must remain active at all times. Desktop header tabs and mobile bottom navigation bars adapt dynamically. When Shopping Lists is disabled, the product dictionary icon in the top header is also hidden automatically.
+- **Active Tab Memory**:
+  - FamilyNotes automatically preserves your last active tab (`lists`, `tasks`, `notes`, or `history`).
+  - When closing and reopening the app or switching vaults, you are seamlessly restored to where you were working.
+- **Text & Display Size (Scaling & Accessibility)**:
+  - Select between 3 proportional levels: **Normal (100%)**, **Large (+15%)**, and **Extra Large (+30%)**.
+  - Text, icons, shopping items, and markdown contents scale harmoniously across desktop and mobile without breaking layouts.
+- **Default Note Open Mode & Mode Memory**:
+  - Choose whether notes open in **Editor (Write)** mode or **Markdown Preview (Read)** mode.
+  - FamilyNotes automatically remembers the mode you used last when viewing notes, applying it globally so you can browse notes in preview mode without having to click the preview button each time.
 - **Device Name**: Personalize the name shown to family members (e.g. *Dad's Phone*, *Kitchen Tablet*).
 - **Master Password Update**: Safely re-encrypt your entire vault with a new master password from the **Security** tab.
 

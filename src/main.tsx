@@ -4,12 +4,15 @@ import App from "./App";
 import "./index.css";
 import { LanguageProvider } from "./context/LanguageContext";
 import { ThemeProvider } from "./context/ThemeContext";
+import { ScaleProvider } from "./context/ScaleContext";
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
     <LanguageProvider>
       <ThemeProvider>
-        <App />
+        <ScaleProvider>
+          <App />
+        </ScaleProvider>
       </ThemeProvider>
     </LanguageProvider>
   </React.StrictMode>

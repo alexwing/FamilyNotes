@@ -10,11 +10,15 @@ import {
   ShoppingItem,
   ShoppingList,
   Note,
+  Task,
+  TaskStatus,
   ProductCatalogItem,
   VaultProfile,
+  EnabledTabs,
 } from "./types";
 import { Header } from "./components/Header";
 import { ShoppingListView } from "./components/ShoppingListView";
+import { TasksView } from "./components/TasksView";
 import { NotesView } from "./components/NotesView";
 import { HistoryView } from "./components/HistoryView";
 import { SettingsModal } from "./components/SettingsModal";
@@ -27,6 +31,36 @@ import { BUILTIN_DICTIONARY, normalizeText } from "./utils/productDictionary";
 
 const DEFAULT_VAULT_FILENAME = "family_notes.fnvault";
 
+const getFirstEnabledTab = (tabs?: EnabledTabs): "lists" | "tasks" | "notes" | "history" => {
+  if (tabs?.lists !== false) return "lists";
+  if (tabs?.tasks !== false) return "tasks";
+  if (tabs?.notes !== false) return "notes";
+  if (tabs?.history !== false) return "history";
+  return "lists";
+};
+
+const resolveValidTab = (
+  desiredTab: string | null | undefined,
+  tabs?: EnabledTabs
+): "lists" | "tasks" | "notes" | "history" => {
+  if (desiredTab === "lists" || desiredTab === "tasks" || desiredTab === "notes" || desiredTab === "history") {
+    if (tabs?.[desiredTab] !== false) {
+      return desiredTab;
+    }
+  }
+  return getFirstEnabledTab(tabs);
+};
+
+const getInitialActiveTab = (): "lists" | "tasks" | "notes" | "history" => {
+  try {
+    const saved = localStorage.getItem("familynotes_last_active_tab");
+    if (saved === "lists" || saved === "tasks" || saved === "notes" || saved === "history") {
+      return saved;
+    }
+  } catch {}
+  return "lists";
+};
+
 export function App() {
   const { t } = useTranslation();
   const [preferences, setPreferences] = useState<Preferences>({
@@ -37,13 +71,16 @@ export function App() {
     savedMasterPassword: null,
     vaultFilePath: null,
     activeVaultId: null,
+    lastActiveTab: getInitialActiveTab(),
+    uiScale: "normal",
+    noteMode: "edit",
     vaults: [],
   });
 
   const [isInitializing, setIsInitializing] = useState(true);
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [vaultData, setVaultData] = useState<VaultData | null>(null);
-  const [activeTab, setActiveTab] = useState<"lists" | "notes" | "history">("lists");
+  const [activeTab, setActiveTab] = useState<"lists" | "tasks" | "notes" | "history">(getInitialActiveTab);
   const [selectedListId, setSelectedListId] = useState("ALL_LISTS");
   const [syncing, setSyncing] = useState(false);
 
@@ -83,6 +120,42 @@ export function App() {
     preferencesRef.current = preferences;
   }, [preferences]);
 
+  const handleTabChange = useCallback((tab: "lists" | "tasks" | "notes" | "history") => {
+    setActiveTab(tab);
+    try {
+      localStorage.setItem("familynotes_last_active_tab", tab);
+      const activeId = preferencesRef.current.activeVaultId;
+      if (activeId) {
+        localStorage.setItem(`familynotes_last_tab_${activeId}`, tab);
+      }
+    } catch {}
+
+    const activeId = preferencesRef.current.activeVaultId;
+    if (activeId) {
+      const updatedVaults = preferencesRef.current.vaults.map((v) =>
+        v.id === activeId ? { ...v, lastActiveTab: tab } : v
+      );
+      const updatedPrefs: Preferences = {
+        ...preferencesRef.current,
+        lastActiveTab: tab,
+        vaults: updatedVaults,
+      };
+      setPreferences(updatedPrefs);
+      void Api.savePreferences(updatedPrefs);
+    }
+  }, []);
+
+  const handleNoteModeChange = useCallback((mode: "edit" | "preview" | "split") => {
+    try {
+      localStorage.setItem("familynotes_note_mode", mode);
+    } catch {}
+    setPreferences((prev) => {
+      const updated: Preferences = { ...prev, noteMode: mode };
+      void Api.savePreferences(updated);
+      return updated;
+    });
+  }, []);
+
   // Load vault data into state
   const refreshVaultData = useCallback(async () => {
     try {
@@ -120,6 +193,24 @@ export function App() {
       }
 
       setVaultData(data);
+      setActiveTab((curr) => resolveValidTab(curr, data.enabledTabs));
+
+      const activeId = preferencesRef.current.activeVaultId;
+      if (activeId && data.enabledTabs) {
+        const curProfile = preferencesRef.current.vaults.find((v) => v.id === activeId);
+        if (curProfile && JSON.stringify(curProfile.enabledTabs) !== JSON.stringify(data.enabledTabs)) {
+          const updatedVaults = preferencesRef.current.vaults.map((v) =>
+            v.id === activeId ? { ...v, enabledTabs: data.enabledTabs } : v
+          );
+          const updatedPrefs: Preferences = {
+            ...preferencesRef.current,
+            vaults: updatedVaults,
+          };
+          setPreferences(updatedPrefs);
+          void Api.savePreferences(updatedPrefs);
+        }
+      }
+
       if (data.shoppingLists.length > 0) {
         setSelectedListId((curr) => {
           if (curr === "ALL_LISTS") return curr;
@@ -218,6 +309,24 @@ export function App() {
     return () => clearInterval(interval);
   }, [isUnlocked, performSync]);
 
+  // Prevent accidental webview navigation or host window accelerators when Backspace or Delete is pressed outside input fields
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const isInput =
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.isContentEditable);
+      if (!isInput && (e.key === "Backspace" || e.key === "Delete")) {
+        e.preventDefault();
+      }
+    };
+    window.addEventListener("keydown", handleGlobalKeyDown);
+    return () => window.removeEventListener("keydown", handleGlobalKeyDown);
+  }, []);
+
   // Restore & Persist Window State (Fullscreen / Maximized / Windowed) on Desktop
   useEffect(() => {
     try {
@@ -314,6 +423,20 @@ export function App() {
               prefsNeedSave = true;
             }
           }
+          const storedScale = localStorage.getItem("familynotes_ui_scale");
+          if (storedScale && ["normal", "large", "xlarge"].includes(storedScale)) {
+            if (prefs.uiScale !== storedScale) {
+              prefs.uiScale = storedScale as any;
+              prefsNeedSave = true;
+            }
+          }
+          const storedNoteMode = localStorage.getItem("familynotes_note_mode");
+          if (storedNoteMode && ["edit", "preview", "split"].includes(storedNoteMode)) {
+            if (prefs.noteMode !== storedNoteMode) {
+              prefs.noteMode = storedNoteMode as any;
+              prefsNeedSave = true;
+            }
+          }
         } catch {}
 
         if (prefsNeedSave) {
@@ -336,6 +459,15 @@ export function App() {
         }
 
         vaultPathRef.current = active.filePath;
+
+        const savedVaultTab =
+          localStorage.getItem(`familynotes_last_tab_${active.id}`) ||
+          localStorage.getItem("familynotes_last_active_tab") ||
+          active.lastActiveTab ||
+          prefs.lastActiveTab;
+        const validTab = resolveValidTab(savedVaultTab, active.enabledTabs);
+        setActiveTab(validTab);
+
         const fileExists = await Api.vaultFileExists(active.filePath);
 
         if (!fileExists) {
@@ -576,6 +708,14 @@ export function App() {
     };
     await Api.savePreferences(updatedPrefs);
     setPreferences(updatedPrefs);
+
+    // Restore vault's last active tab
+    const savedVaultTab =
+      localStorage.getItem(`familynotes_last_tab_${vault.id}`) ||
+      vault.lastActiveTab ||
+      localStorage.getItem("familynotes_last_active_tab");
+    const validTab = resolveValidTab(savedVaultTab, vault.enabledTabs);
+    setActiveTab(validTab);
 
     // Try auto-unlock if password saved
     const pass = vault.savedMasterPassword || preferences.savedMasterPassword;
@@ -1226,6 +1366,128 @@ export function App() {
     }
   };
 
+  // Task Operations
+  const handleUpsertTask = async (task: Task) => {
+    setVaultData((prev) => {
+      if (!prev) return prev;
+      const tasks = prev.tasks || [];
+      const exists = tasks.some((t) => t.id === task.id);
+      const updated = exists
+        ? tasks.map((t) => (t.id === task.id ? task : t))
+        : [task, ...tasks];
+      return { ...prev, tasks: updated };
+    });
+
+    try {
+      const snap = await Api.upsertTask(task);
+      await persistVaultFile(snap.contents);
+      await refreshVaultData();
+      showToast(t("tasks.saveTask"), "💾");
+      scheduleDebouncedSync();
+    } catch (e) {
+      console.error("Save task error:", e);
+      await refreshVaultData();
+    }
+  };
+
+  const handleCreateTaskFromNote = async (note: Note) => {
+    const defaultStatus = (vaultData?.taskStatuses || []).sort((a, b) => a.order - b.order)[0];
+    const defaultStatusId = defaultStatus?.id || "todo";
+    const existingTasks = (vaultData?.tasks || []).filter((t) => t.statusId === defaultStatusId);
+    const maxOrder = existingTasks.reduce((max, t) => Math.max(max, t.order || 0), 0);
+    const now = new Date().toISOString();
+    const newTask: Task = {
+      id:
+        typeof crypto !== "undefined" && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `task_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      title: note.title.trim() || note.content.slice(0, 45).trim() || "Nota",
+      description: note.content || "",
+      statusId: defaultStatusId,
+      priority: "medium",
+      assignee: null,
+      dueDate: null,
+      tags: note.tags && note.tags.length > 0 ? [...note.tags] : [],
+      order: existingTasks.length > 0 ? maxOrder + 1 : 0,
+      createdAt: now,
+      updatedAt: now,
+    };
+    await handleUpsertTask(newTask);
+    showToast(t("tasks.noteConvertedToast", { status: defaultStatus?.name || "" }), "📝");
+  };
+
+  const handleDeleteTask = async (taskId: string) => {
+    setVaultData((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        tasks: (prev.tasks || []).filter((t) => t.id !== taskId),
+      };
+    });
+
+    try {
+      const snap = await Api.deleteTask(taskId);
+      await persistVaultFile(snap.contents);
+      showToast(t("toasts.noteDeleted"), "🗑️");
+      scheduleDebouncedSync();
+    } catch (e) {
+      console.error("Delete task error:", e);
+      await refreshVaultData();
+    }
+  };
+
+  const handleReorderTasks = async (taskIds: string[]) => {
+    setVaultData((prev) => {
+      if (!prev) return prev;
+      const map = new Map((prev.tasks || []).map((t) => [t.id, t]));
+      const reordered: Task[] = [];
+      for (const id of taskIds) {
+        const item = map.get(id);
+        if (item) {
+          reordered.push(item);
+          map.delete(id);
+        }
+      }
+      for (const item of map.values()) {
+        reordered.push(item);
+      }
+      return { ...prev, tasks: reordered };
+    });
+
+    try {
+      const snap = await Api.reorderTasks(taskIds);
+      await persistVaultFile(snap.contents);
+      scheduleDebouncedSync();
+    } catch (e) {
+      console.error("Reorder tasks error:", e);
+      await refreshVaultData();
+    }
+  };
+
+  const handleUpsertTaskStatus = async (status: TaskStatus) => {
+    try {
+      const snap = await Api.upsertTaskStatus(status);
+      await persistVaultFile(snap.contents);
+      await refreshVaultData();
+      showToast(t("common.saved"), "⚙️");
+      scheduleDebouncedSync();
+    } catch (e) {
+      console.error("Upsert task status error:", e);
+    }
+  };
+
+  const handleDeleteTaskStatus = async (statusId: string, fallbackStatusId?: string) => {
+    try {
+      const snap = await Api.deleteTaskStatus(statusId, fallbackStatusId);
+      await persistVaultFile(snap.contents);
+      await refreshVaultData();
+      showToast(t("common.deleted"), "🗑️");
+      scheduleDebouncedSync();
+    } catch (e) {
+      console.error("Delete task status error:", e);
+    }
+  };
+
   // Manual Sync
   const handleManualSync = async () => {
     if (syncTimeoutRef.current) {
@@ -1264,6 +1526,49 @@ export function App() {
     }
   };
 
+  // Update Enabled Tabs / Modules for Current Vault
+  const handleUpdateEnabledTabs = async (newTabs: EnabledTabs) => {
+    try {
+      setVaultData((prev) => (prev ? { ...prev, enabledTabs: newTabs } : null));
+
+      const activeId = preferences.activeVaultId;
+      if (activeId) {
+        const updatedVaults = preferences.vaults.map((v) =>
+          v.id === activeId ? { ...v, enabledTabs: newTabs } : v
+        );
+        const updatedPrefs: Preferences = {
+          ...preferences,
+          vaults: updatedVaults,
+        };
+        setPreferences(updatedPrefs);
+        await Api.savePreferences(updatedPrefs);
+      }
+
+      // If active tab is now disabled, switch to first available tab
+      setActiveTab((currTab) => {
+        if (newTabs[currTab] === false) {
+          const fallback = getFirstEnabledTab(newTabs);
+          try {
+            localStorage.setItem("familynotes_last_active_tab", fallback);
+            if (activeId) {
+              localStorage.setItem(`familynotes_last_tab_${activeId}`, fallback);
+            }
+          } catch {}
+          return fallback;
+        }
+        return currTab;
+      });
+
+      const snap = await Api.setVaultEnabledTabs(newTabs);
+      await persistVaultFile(snap.contents);
+      scheduleDebouncedSync();
+      showToast(t("common.saved"), "⚙️");
+    } catch (e) {
+      console.error("Failed to update enabled tabs:", e);
+      showToast(t("toasts.vaultCreateError"), "❌");
+    }
+  };
+
   // Render Onboarding
   if (isOnboardingOpen) {
     return (
@@ -1299,10 +1604,10 @@ export function App() {
   // Render Manual Unlock Screen
   if (!isUnlocked) {
     return (
-      <div className="min-h-screen bg-slate-100 dark:bg-slate-950 flex flex-col items-center justify-center p-4 transition-colors">
+      <div className="fixed inset-0 bg-slate-100 dark:bg-slate-950 flex flex-col justify-start sm:justify-center items-center overflow-y-auto p-4 transition-colors z-50">
         <form
           onSubmit={handleManualUnlock}
-          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 max-w-sm w-full space-y-4 shadow-2xl text-center animate-in fade-in duration-200 text-slate-900 dark:text-white"
+          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 max-w-sm w-full space-y-4 shadow-2xl text-center animate-in fade-in duration-200 text-slate-900 dark:text-white my-auto shrink-0 max-h-[calc(100%-1rem)] overflow-y-auto"
         >
           <img src="/icon.png" alt="FamilyNotes" className="w-14 h-14 rounded-2xl mx-auto shadow-lg shadow-emerald-500/20" />
           <div>
@@ -1368,13 +1673,20 @@ export function App() {
     0
   );
   const totalNotes = (vaultData?.notes || []).length;
+  const statusMap = new Map((vaultData?.taskStatuses || []).map((s) => [s.id, s]));
+  const totalPendingTasks = (vaultData?.tasks || []).filter((t) => {
+    if (t.archived) return false;
+    const status = statusMap.get(t.statusId);
+    return !status?.isCompleted;
+  }).length;
 
   return (
     <div className="fixed inset-0 bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col overflow-hidden transition-colors">
       {/* Top Header */}
       <Header
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        setActiveTab={handleTabChange}
+        enabledTabs={vaultData?.enabledTabs || currentVault?.enabledTabs}
         syncConfig={vaultData?.sync}
         syncing={syncing}
         onSync={handleManualSync}
@@ -1410,6 +1722,21 @@ export function App() {
           />
         )}
 
+        {activeTab === "tasks" && (
+          <TasksView
+            tasks={vaultData?.tasks || []}
+            taskStatuses={vaultData?.taskStatuses || []}
+            members={vaultData?.members || []}
+            notes={vaultData?.notes || []}
+            onShowToast={showToast}
+            onUpsertTask={handleUpsertTask}
+            onDeleteTask={handleDeleteTask}
+            onReorderTasks={handleReorderTasks}
+            onUpsertTaskStatus={handleUpsertTaskStatus}
+            onDeleteTaskStatus={handleDeleteTaskStatus}
+          />
+        )}
+
         {activeTab === "notes" && (
           <NotesView
             notes={vaultData?.notes || []}
@@ -1418,6 +1745,9 @@ export function App() {
             onArchiveNote={handleArchiveNote}
             onUnarchiveNote={handleUnarchiveNote}
             onReorderNotes={handleReorderNotes}
+            defaultNoteMode={preferences.noteMode}
+            onNoteModeChange={handleNoteModeChange}
+            onCreateTaskFromNote={handleCreateTaskFromNote}
           />
         )}
 
@@ -1436,9 +1766,11 @@ export function App() {
       {/* Mobile Ergonomic Bottom Navigation Bar */}
       <BottomNav
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        setActiveTab={handleTabChange}
         pendingCount={totalPending}
+        tasksCount={totalPendingTasks}
         notesCount={totalNotes}
+        enabledTabs={vaultData?.enabledTabs || currentVault?.enabledTabs}
       />
 
       {/* Settings Modal */}
@@ -1464,6 +1796,9 @@ export function App() {
         vaultData={vaultData}
         onShowToast={showToast}
         onDeleteDevice={handleDeleteFamilyMember}
+        currentVault={currentVault}
+        onUpdateEnabledTabs={handleUpdateEnabledTabs}
+        onSaveNoteMode={handleNoteModeChange}
       />
 
       {/* Vault Manager Modal */}

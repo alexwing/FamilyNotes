@@ -162,6 +162,8 @@ mod tests {
                 archived: false,
             }],
             notes: vec![],
+            tasks: vec![],
+            task_statuses: vec![],
             purchase_history: vec![],
             deleted_history_items: vec![],
             catalog: vec![],
@@ -172,6 +174,9 @@ mod tests {
             deleted_item_ids: vec![],
             deleted_note_ids: vec![],
             deleted_catalog_ids: vec![],
+            deleted_task_ids: vec![],
+            deleted_task_status_ids: vec![],
+            enabled_tabs: None,
         };
 
         let ciphertext = seal_payload(&data, &mut header, &key[..]).expect("seal");

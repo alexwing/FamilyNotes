@@ -1,6 +1,6 @@
 [package]
 name = "family-notes"
-version = "1.0.3"
+version = "1.0.4"
 description = "Family shared shopping lists and encrypted notes with FTP sync and local key storage"
 authors = ["FamilyNotes Team"]
 edition = "2021"

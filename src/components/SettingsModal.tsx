@@ -17,13 +17,33 @@ import {
   Monitor,
   Globe,
   Trash2,
+  Layers,
+  ShoppingCart,
+  Kanban,
+  FileText,
+  History,
+  Type,
+  Edit3,
+  Eye,
+  Columns,
 } from "lucide-react";
 import QRCode from "qrcode";
-import { SyncConfig, Preferences, VaultData, ThemeMode, LanguageSetting } from "../types";
+import {
+  SyncConfig,
+  Preferences,
+  VaultData,
+  ThemeMode,
+  LanguageSetting,
+  EnabledTabs,
+  VaultProfile,
+  UiScale,
+  NoteEditorMode,
+} from "../types";
 import Api from "../api";
 import { QrCameraScanner } from "./QrCameraScanner";
 import { useTranslation } from "../context/LanguageContext";
 import { useTheme } from "../context/ThemeContext";
+import { useScale } from "../context/ScaleContext";
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -35,6 +55,9 @@ interface SettingsModalProps {
   vaultData: VaultData | null;
   onShowToast: (msg: string, icon?: string) => void;
   onDeleteDevice?: (id: string, name: string) => Promise<void> | void;
+  currentVault?: VaultProfile | null;
+  onUpdateEnabledTabs?: (tabs: EnabledTabs) => Promise<void> | void;
+  onSaveNoteMode?: (mode: NoteEditorMode) => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -47,11 +70,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   vaultData,
   onShowToast,
   onDeleteDevice,
+  currentVault,
+  onUpdateEnabledTabs,
+  onSaveNoteMode,
 }) => {
   const { t, language, setLanguage } = useTranslation();
   const { mode, setMode } = useTheme();
+  const { scale, setScale } = useScale();
 
   const [activeTab, setActiveTab] = useState<"general" | "ftp" | "security" | "family">("general");
+  const [noteMode, setNoteMode] = useState<NoteEditorMode>(() => {
+    try {
+      const saved = localStorage.getItem("familynotes_note_mode");
+      if (saved === "edit" || saved === "preview" || saved === "split") return saved as NoteEditorMode;
+    } catch {}
+    return preferences.noteMode || "edit";
+  });
   const [syncForm, setSyncForm] = useState<SyncConfig>(syncConfig);
   const [testingSync, setTestingSync] = useState(false);
   const [syncingModal, setSyncingModal] = useState(false);
@@ -78,6 +112,21 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       setDeviceName(preferences.currentDeviceName);
     }
   }, [preferences.currentDeviceName]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (showQrModal) {
+          setShowQrModal(false);
+        } else if (!isScannerOpen) {
+          onClose();
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, showQrModal, isScannerOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -192,10 +241,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-3xl max-w-xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+    <div
+      className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex justify-center items-start sm:items-center overflow-y-auto p-2 sm:p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-3xl max-w-xl w-full max-h-[calc(100%-1rem)] sm:max-h-[calc(100%-2rem)] flex flex-col shadow-2xl overflow-hidden my-auto shrink-0">
         {/* Modal Header */}
-        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0">
+        <div className="px-5 sm:px-6 py-3.5 sm:py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0 bg-white dark:bg-slate-900">
           <div className="flex items-center gap-2">
             <h3 className="text-base font-bold text-slate-900 dark:text-white">{t("settings.title")}</h3>
             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
@@ -203,8 +257,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </span>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+            className="p-1.5 sm:p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+            title={t("common.close")}
           >
             <X size={18} />
           </button>
@@ -270,7 +326,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         </div>
 
         {/* Modal Body */}
-        <div className="flex-1 overflow-y-auto p-6 text-xs space-y-5">
+        <div className="flex-1 overflow-y-auto min-h-0 p-4 sm:p-6 text-xs space-y-5">
           {/* TAB 0: GENERAL SETTINGS (APPEARANCE, LANGUAGE, DEVICE) */}
           {activeTab === "general" && (
             <div className="space-y-5">
@@ -316,6 +372,56 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       >
                         <Icon size={18} className={isSelected ? "text-emerald-500" : "text-slate-400"} />
                         <span>{item.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* TEXT SIZE / UI SCALE SELECTOR */}
+              <div className="p-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-3">
+                <div>
+                  <h4 className="font-bold text-slate-900 dark:text-white text-xs flex items-center gap-1.5">
+                    <Type size={15} className="text-emerald-500" />
+                    <span>{t("settings.general.scaleTitle")}</span>
+                  </h4>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    {t("settings.general.scaleDesc")}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { id: "normal" as UiScale, label: t("settings.general.scaleNormal"), sub: t("settings.general.scaleNormalSub"), previewClass: "text-xs font-bold" },
+                    { id: "large" as UiScale, label: t("settings.general.scaleLarge"), sub: t("settings.general.scaleLargeSub"), previewClass: "text-sm font-bold" },
+                    { id: "xlarge" as UiScale, label: t("settings.general.scaleXLarge"), sub: t("settings.general.scaleXLargeSub"), previewClass: "text-base font-bold" },
+                  ].map((item) => {
+                    const isSelected = scale === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={async () => {
+                          setScale(item.id);
+                          const updated = { ...preferences, uiScale: item.id };
+                          onSavePreferences(updated);
+                          try {
+                            await Api.savePreferences(updated);
+                          } catch (e) {
+                            console.error("Failed to save scale preference:", e);
+                          }
+                        }}
+                        className={`flex flex-col items-center justify-center p-3 rounded-xl border font-bold text-xs gap-1 transition cursor-pointer ${
+                          isSelected
+                            ? "bg-emerald-500/15 border-emerald-500 text-emerald-600 dark:text-emerald-400 shadow-sm"
+                            : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700"
+                        }`}
+                      >
+                        <span className={`tracking-tight ${item.previewClass} ${isSelected ? "text-emerald-500" : "text-slate-400"}`}>
+                          Aa
+                        </span>
+                        <span className="leading-tight">{item.label}</span>
+                        <span className="text-[10px] font-normal opacity-70">{item.sub}</span>
                       </button>
                     );
                   })}
@@ -369,6 +475,58 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
               </div>
 
+              {/* NOTE OPEN MODE SELECTOR */}
+              <div className="p-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-3">
+                <div>
+                  <h4 className="font-bold text-slate-900 dark:text-white text-xs flex items-center gap-1.5">
+                    <FileText size={15} className="text-amber-500" />
+                    <span>{t("settings.general.noteOpenModeTitle")}</span>
+                  </h4>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    {t("settings.general.noteOpenModeDesc")}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { id: "edit" as NoteEditorMode, label: t("settings.general.noteModeEdit"), icon: Edit3 },
+                    { id: "preview" as NoteEditorMode, label: t("settings.general.noteModePreview"), icon: Eye },
+                    { id: "split" as NoteEditorMode, label: t("settings.general.noteModeSplit"), icon: Columns },
+                  ].map((item) => {
+                    const Icon = item.icon;
+                    const isSelected = noteMode === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={async () => {
+                          setNoteMode(item.id);
+                          try {
+                            localStorage.setItem("familynotes_note_mode", item.id);
+                          } catch {}
+                          onSaveNoteMode?.(item.id);
+                          const updated = { ...preferences, noteMode: item.id };
+                          onSavePreferences(updated);
+                          try {
+                            await Api.savePreferences(updated);
+                          } catch (e) {
+                            console.error("Failed to save noteMode preference:", e);
+                          }
+                        }}
+                        className={`flex flex-col items-center justify-center p-3 rounded-xl border font-bold text-xs gap-1.5 transition cursor-pointer ${
+                          isSelected
+                            ? "bg-emerald-500/15 border-emerald-500 text-emerald-600 dark:text-emerald-400 shadow-sm"
+                            : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700"
+                        }`}
+                      >
+                        <Icon size={18} className={isSelected ? "text-emerald-500" : "text-slate-400"} />
+                        <span>{item.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               {/* DEVICE NAME */}
               <div className="p-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-3">
                 <div>
@@ -398,6 +556,122 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   </button>
                 </div>
               </div>
+
+              {/* VAULT MODULES / TABS */}
+              {currentVault && (
+                <div className="p-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-3">
+                  <div>
+                    <h4 className="font-bold text-slate-900 dark:text-white text-xs flex items-center gap-1.5">
+                      <Layers size={15} className="text-emerald-500" />
+                      <span>{t("settings.general.modulesTitle")}</span>
+                    </h4>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                      {t("settings.general.modulesDesc", { name: currentVault.name })}
+                    </p>
+                  </div>
+
+                  {(() => {
+                    const currentTabs: EnabledTabs = vaultData?.enabledTabs || currentVault.enabledTabs || {
+                      lists: true,
+                      tasks: true,
+                      notes: true,
+                      history: true,
+                    };
+                    const activeCount = [
+                      currentTabs.lists !== false,
+                      currentTabs.tasks !== false,
+                      currentTabs.notes !== false,
+                      currentTabs.history !== false,
+                    ].filter(Boolean).length;
+
+                    const modules = [
+                      {
+                        key: "lists" as const,
+                        label: t("settings.general.moduleLists"),
+                        icon: ShoppingCart,
+                        color: "text-emerald-500",
+                      },
+                      {
+                        key: "tasks" as const,
+                        label: t("settings.general.moduleTasks"),
+                        icon: Kanban,
+                        color: "text-blue-500",
+                      },
+                      {
+                        key: "notes" as const,
+                        label: t("settings.general.moduleNotes"),
+                        icon: FileText,
+                        color: "text-amber-500",
+                      },
+                      {
+                        key: "history" as const,
+                        label: t("settings.general.moduleHistory"),
+                        icon: History,
+                        color: "text-sky-500",
+                      },
+                    ];
+
+                    return (
+                      <div className="space-y-2">
+                        {modules.map((m) => {
+                          const isEnabled = currentTabs[m.key] !== false;
+                          const Icon = m.icon;
+                          const isOnlyActive = isEnabled && activeCount <= 1;
+
+                          return (
+                            <label
+                              key={m.key}
+                              className={`flex items-center justify-between p-3 rounded-xl border transition cursor-pointer select-none ${
+                                isEnabled
+                                  ? "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-emerald-500/50"
+                                  : "bg-slate-100/60 dark:bg-slate-900/40 border-slate-200/60 dark:border-slate-800/50 opacity-60 hover:opacity-80"
+                              }`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <div
+                                  className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                                    isEnabled
+                                      ? "bg-emerald-500/10 dark:bg-emerald-500/20"
+                                      : "bg-slate-200 dark:bg-slate-800"
+                                  }`}
+                                >
+                                  <Icon size={16} className={isEnabled ? m.color : "text-slate-400"} />
+                                </div>
+                                <span className="font-semibold text-xs text-slate-900 dark:text-white block">
+                                  {m.label}
+                                </span>
+                              </div>
+
+                              <input
+                                type="checkbox"
+                                checked={isEnabled}
+                                disabled={isOnlyActive}
+                                onChange={async () => {
+                                  if (isEnabled && activeCount <= 1) {
+                                    onShowToast(t("settings.general.modulesAtLeastOne"), "⚠️");
+                                    return;
+                                  }
+                                  const updatedTabs: EnabledTabs = {
+                                    lists: currentTabs.lists !== false,
+                                    tasks: currentTabs.tasks !== false,
+                                    notes: currentTabs.notes !== false,
+                                    history: currentTabs.history !== false,
+                                    [m.key]: !isEnabled,
+                                  };
+                                  if (onUpdateEnabledTabs) {
+                                    await onUpdateEnabledTabs(updatedTabs);
+                                  }
+                                }}
+                                className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                              />
+                            </label>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
             </div>
           )}
 
@@ -794,13 +1068,31 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           )}
         </div>
 
+        {/* Modal Footer */}
+        <div className="px-5 sm:px-6 py-2.5 sm:py-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end shrink-0 bg-slate-50/70 dark:bg-slate-950/40">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-1.5 sm:py-2 bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold rounded-xl text-xs transition cursor-pointer"
+          >
+            {t("common.close")}
+          </button>
+        </div>
+
         {/* QR MODAL VIEWER */}
         {showQrModal && (
-          <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-3xl max-w-sm w-full p-6 text-center space-y-4 shadow-2xl relative">
+          <div
+            className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex justify-center items-start sm:items-center overflow-y-auto p-2 sm:p-4"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setShowQrModal(false);
+            }}
+          >
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-3xl max-w-sm w-full p-5 sm:p-6 text-center space-y-3.5 shadow-2xl relative my-auto shrink-0 max-h-[calc(100%-1rem)] sm:max-h-[calc(100%-2rem)] overflow-y-auto">
               <button
+                type="button"
                 onClick={() => setShowQrModal(false)}
-                className="absolute top-4 right-4 p-1.5 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                className="absolute top-4 right-4 p-1.5 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                title={t("common.close")}
               >
                 <X size={18} />
               </button>
@@ -815,11 +1107,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
 
               {/* QR Image */}
-              <div className="p-3 bg-white rounded-2xl shadow-xl inline-block mx-auto">
+              <div className="p-2 sm:p-3 bg-white rounded-2xl shadow-xl inline-block mx-auto">
                 <img
                   src={qrCodeUrl}
                   alt={t("settings.family.qrModalAlt")}
-                  className="w-56 h-56 mx-auto rounded-lg"
+                  className="w-44 h-44 sm:w-52 sm:h-52 mx-auto rounded-lg object-contain"
                 />
               </div>
 

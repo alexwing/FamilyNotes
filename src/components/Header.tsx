@@ -1,6 +1,7 @@
 import React from "react";
 import {
   ShoppingCart,
+  Kanban,
   FileText,
   History,
   Settings,
@@ -9,12 +10,13 @@ import {
   Vault,
   BookOpen,
 } from "lucide-react";
-import { SyncConfig, VaultProfile } from "../types";
+import { EnabledTabs, SyncConfig, VaultProfile } from "../types";
 import { useTranslation } from "../context/LanguageContext";
 
 interface HeaderProps {
-  activeTab: "lists" | "notes" | "history";
-  setActiveTab: (tab: "lists" | "notes" | "history") => void;
+  activeTab: "lists" | "tasks" | "notes" | "history";
+  setActiveTab: (tab: "lists" | "tasks" | "notes" | "history") => void;
+  enabledTabs?: EnabledTabs;
   syncConfig?: SyncConfig;
   syncing: boolean;
   onSync: () => void;
@@ -29,6 +31,7 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({
   activeTab,
   setActiveTab,
+  enabledTabs,
   syncConfig,
   syncing,
   onSync,
@@ -60,44 +63,65 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Main Navigation Tabs (Desktop / Tablet only >= md) */}
         <nav className="hidden md:flex items-center gap-1 bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800/90 p-1 rounded-xl">
-          <button
-            type="button"
-            onClick={() => setActiveTab("lists")}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-              activeTab === "lists"
-                ? "bg-emerald-500 text-slate-950 shadow-md font-bold"
-                : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
-            }`}
-          >
-            <ShoppingCart size={15} />
-            <span>{t("nav.lists")}</span>
-          </button>
+          {enabledTabs?.lists !== false && (
+            <button
+              type="button"
+              onClick={() => setActiveTab("lists")}
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                activeTab === "lists"
+                  ? "bg-emerald-500 text-slate-950 shadow-md font-bold"
+                  : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+              }`}
+            >
+              <ShoppingCart size={15} />
+              <span>{t("nav.lists")}</span>
+            </button>
+          )}
 
-          <button
-            type="button"
-            onClick={() => setActiveTab("notes")}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-              activeTab === "notes"
-                ? "bg-emerald-500 text-slate-950 shadow-md font-bold"
-                : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
-            }`}
-          >
-            <FileText size={15} />
-            <span>{t("nav.notes")}</span>
-          </button>
+          {enabledTabs?.tasks !== false && (
+            <button
+              type="button"
+              onClick={() => setActiveTab("tasks")}
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                activeTab === "tasks"
+                  ? "bg-emerald-500 text-slate-950 shadow-md font-bold"
+                  : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+              }`}
+            >
+              <Kanban size={15} />
+              <span>{t("nav.tasks")}</span>
+            </button>
+          )}
 
-          <button
-            type="button"
-            onClick={() => setActiveTab("history")}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-              activeTab === "history"
-                ? "bg-emerald-500 text-slate-950 shadow-md font-bold"
-                : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
-            }`}
-          >
-            <History size={15} />
-            <span>{t("nav.history")}</span>
-          </button>
+          {enabledTabs?.notes !== false && (
+            <button
+              type="button"
+              onClick={() => setActiveTab("notes")}
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                activeTab === "notes"
+                  ? "bg-emerald-500 text-slate-950 shadow-md font-bold"
+                  : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+              }`}
+            >
+              <FileText size={15} />
+              <span>{t("nav.notes")}</span>
+            </button>
+          )}
+
+          {enabledTabs?.history !== false && (
+            <button
+              type="button"
+              onClick={() => setActiveTab("history")}
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                activeTab === "history"
+                  ? "bg-emerald-500 text-slate-950 shadow-md font-bold"
+                  : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+              }`}
+            >
+              <History size={15} />
+              <span>{t("nav.history")}</span>
+            </button>
+          )}
         </nav>
 
         {/* Top Actions: Sync, Catalog, Settings, Lock */}
@@ -119,7 +143,7 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           )}
 
-          {onOpenCatalogModal && (
+          {enabledTabs?.lists !== false && onOpenCatalogModal && (
             <button
               type="button"
               onClick={onOpenCatalogModal}

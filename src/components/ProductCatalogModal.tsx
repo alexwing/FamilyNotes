@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   X,
   Plus,
@@ -104,9 +104,27 @@ export const ProductCatalogModal: React.FC<ProductCatalogModalProps> = ({
     }
   };
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 dark:bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-3xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+    <div
+      className="fixed inset-0 z-50 bg-black/70 dark:bg-black/85 backdrop-blur-md flex justify-center items-start sm:items-center overflow-y-auto p-2 sm:p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-3xl max-w-2xl w-full max-h-[calc(100%-1rem)] sm:max-h-[calc(100%-2rem)] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 my-auto shrink-0">
         {/* Header */}
         <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/90 dark:bg-slate-900/90 shrink-0">
           <div className="flex items-center gap-2.5">
@@ -318,7 +336,7 @@ export const ProductCatalogModal: React.FC<ProductCatalogModalProps> = ({
         )}
 
         {/* Product Items List */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="flex-1 overflow-y-auto min-h-0 p-4 space-y-4">
           {/* Custom User Products */}
           {filteredCustom.length > 0 && (
             <div className="space-y-2">
@@ -396,6 +414,17 @@ export const ProductCatalogModal: React.FC<ProductCatalogModalProps> = ({
               ))}
             </div>
           </div>
+        </div>
+
+        {/* Modal Footer */}
+        <div className="px-5 py-2.5 sm:py-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end shrink-0 bg-slate-50/70 dark:bg-slate-950/40">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-1.5 sm:py-2 bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold rounded-xl text-xs transition cursor-pointer"
+          >
+            {t("common.close")}
+          </button>
         </div>
       </div>
     </div>

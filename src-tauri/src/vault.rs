@@ -7,8 +7,8 @@ use zeroize::Zeroizing;
 use crate::{
     crypto::{default_cipher_info, default_kdf_params, derive_key, now_iso, open_payload, seal_payload, VAULT_MAGIC},
     models::{
-        FamilyMember, Note, ProductCatalogItem, PurchaseHistoryItem, ShoppingItem, ShoppingList,
-        SyncConfig, VaultData, VaultEnvelope, VaultHeader, VaultSnapshot, VaultStatus,
+        EnabledTabs, FamilyMember, Note, ProductCatalogItem, PurchaseHistoryItem, ShoppingItem, ShoppingList,
+        SyncConfig, Task, TaskStatus, VaultData, VaultEnvelope, VaultHeader, VaultSnapshot, VaultStatus,
     },
     sync,
 };
@@ -40,6 +40,7 @@ impl VaultManager {
             lists_count: data.shopping_lists.len(),
             notes_count: data.notes.len(),
             items_count,
+            tasks_count: data.tasks.len(),
             device_name: data.device_name.clone(),
         })
     }
@@ -242,12 +243,68 @@ fn seed_sample_data(device_name: &str, device_id: &str) -> VaultData {
                 color: "#10b981".to_string(),
             },
         ],
+        task_statuses: vec![
+            TaskStatus {
+                id: "todo".to_string(),
+                name: "Por hacer".to_string(),
+                color: "#64748b".to_string(),
+                order: 0,
+                is_completed: false,
+            },
+            TaskStatus {
+                id: "in_progress".to_string(),
+                name: "En progreso".to_string(),
+                color: "#3b82f6".to_string(),
+                order: 1,
+                is_completed: false,
+            },
+            TaskStatus {
+                id: "done".to_string(),
+                name: "Completada".to_string(),
+                color: "#10b981".to_string(),
+                order: 2,
+                is_completed: true,
+            },
+        ],
+        tasks: vec![
+            Task {
+                id: Uuid::new_v4().to_string(),
+                title: "Comprar bombillas LED salón".to_string(),
+                description: "Revisar casquillos E27 y comprar luz cálida (3000K).".to_string(),
+                status_id: "todo".to_string(),
+                priority: "medium".to_string(),
+                assignee: Some(device_name.to_string()),
+                due_date: None,
+                tags: vec!["Hogar".to_string(), "Bricolaje".to_string()],
+                order: 0,
+                created_at: now.clone(),
+                updated_at: now.clone(),
+                archived: false,
+            },
+            Task {
+                id: Uuid::new_v4().to_string(),
+                title: "Planificar vacaciones de verano".to_string(),
+                description: "Revisar opciones de alojamiento, fechas disponibles y presupuesto familiar.".to_string(),
+                status_id: "in_progress".to_string(),
+                priority: "high".to_string(),
+                assignee: None,
+                due_date: None,
+                tags: vec!["Viajes".to_string(), "Familia".to_string()],
+                order: 1,
+                created_at: now.clone(),
+                updated_at: now.clone(),
+                archived: false,
+            },
+        ],
+        deleted_task_ids: Vec::new(),
+        deleted_task_status_ids: Vec::new(),
         deleted_member_ids: Vec::new(),
         deleted_history_items: Vec::new(),
         deleted_list_ids: Vec::new(),
         deleted_item_ids: Vec::new(),
         deleted_note_ids: Vec::new(),
         deleted_catalog_ids: Vec::new(),
+        enabled_tabs: Some(EnabledTabs::default()),
     }
 }
 
@@ -325,6 +382,33 @@ pub fn unlock_vault(
         if l.id.trim().is_empty() {
             l.id = Uuid::new_v4().to_string();
         }
+    }
+
+    // Asegurar estados iniciales de tareas si la bóveda no tenía ninguno
+    if data.task_statuses.is_empty() {
+        data.task_statuses = vec![
+            TaskStatus {
+                id: "todo".to_string(),
+                name: "Por hacer".to_string(),
+                color: "#64748b".to_string(),
+                order: 0,
+                is_completed: false,
+            },
+            TaskStatus {
+                id: "in_progress".to_string(),
+                name: "En progreso".to_string(),
+                color: "#3b82f6".to_string(),
+                order: 1,
+                is_completed: false,
+            },
+            TaskStatus {
+                id: "done".to_string(),
+                name: "Completada".to_string(),
+                color: "#10b981".to_string(),
+                order: 2,
+                is_completed: true,
+            },
+        ];
     }
 
     let mut mgr = state.lock().map_err(|_| "mutex_lock_failed")?;
@@ -695,6 +779,24 @@ pub fn set_sync_config(
 }
 
 #[tauri::command]
+pub fn set_vault_enabled_tabs(
+    enabled_tabs: EnabledTabs,
+    state: State<'_, VaultState>,
+) -> Result<VaultSnapshot, String> {
+    if !enabled_tabs.lists && !enabled_tabs.tasks && !enabled_tabs.notes && !enabled_tabs.history {
+        return Err("at_least_one_tab_required".to_string());
+    }
+
+    let mut mgr = state.lock().map_err(|_| "mutex_lock_failed")?;
+    let data = mgr.data.as_mut().ok_or_else(|| "vault_locked".to_string())?;
+
+    data.enabled_tabs = Some(enabled_tabs);
+    data.revision += 1;
+
+    mgr.seal_current()
+}
+
+#[tauri::command]
 pub fn test_sync(config: SyncConfig) -> Result<(), String> {
     sync::test_connection(&config)
 }
@@ -823,6 +925,57 @@ fn merge_catalog(
     result
 }
 
+fn merge_tasks(
+    primary: &[Task],
+    secondary: &[Task],
+    deleted_tasks: &HashSet<String>,
+) -> Vec<Task> {
+    let mut result: Vec<Task> = Vec::new();
+    for pri_task in primary {
+        if !deleted_tasks.contains(&pri_task.id) {
+            result.push(pri_task.clone());
+        }
+    }
+
+    for sec_task in secondary {
+        if deleted_tasks.contains(&sec_task.id) {
+            continue;
+        }
+        if let Some(pri_task) = result.iter_mut().find(|t| t.id == sec_task.id) {
+            if sec_task.updated_at > pri_task.updated_at {
+                *pri_task = sec_task.clone();
+            }
+        } else {
+            result.push(sec_task.clone());
+        }
+    }
+    result
+}
+
+fn merge_task_statuses(
+    primary: &[TaskStatus],
+    secondary: &[TaskStatus],
+    deleted_statuses: &HashSet<String>,
+) -> Vec<TaskStatus> {
+    let mut result: Vec<TaskStatus> = Vec::new();
+    for pri_status in primary {
+        if !deleted_statuses.contains(&pri_status.id) {
+            result.push(pri_status.clone());
+        }
+    }
+
+    for sec_status in secondary {
+        if deleted_statuses.contains(&sec_status.id) {
+            continue;
+        }
+        if !result.iter().any(|s| s.id == sec_status.id) {
+            result.push(sec_status.clone());
+        }
+    }
+    result.sort_by_key(|s| s.order);
+    result
+}
+
 #[tauri::command]
 pub fn sync_now(state: State<'_, VaultState>) -> Result<VaultSnapshot, String> {
     let mut mgr = state.lock().map_err(|_| "mutex_lock_failed")?;
@@ -919,6 +1072,26 @@ pub fn sync_now(state: State<'_, VaultState>) -> Result<VaultSnapshot, String> {
                 all_deleted_catalog.insert(d.clone());
             }
 
+            // Merge deleted_task_ids
+            let mut all_deleted_tasks: HashSet<String> = local_data
+                .deleted_task_ids
+                .iter()
+                .cloned()
+                .collect();
+            for d in &remote_data.deleted_task_ids {
+                all_deleted_tasks.insert(d.clone());
+            }
+
+            // Merge deleted_task_status_ids
+            let mut all_deleted_task_statuses: HashSet<String> = local_data
+                .deleted_task_status_ids
+                .iter()
+                .cloned()
+                .collect();
+            for d in &remote_data.deleted_task_status_ids {
+                all_deleted_task_statuses.insert(d.clone());
+            }
+
             // Merge members: filter out deleted ones
             let mut merged_members: Vec<FamilyMember> = Vec::new();
             let mut seen_ids: HashSet<String> = HashSet::new();
@@ -947,7 +1120,7 @@ pub fn sync_now(state: State<'_, VaultState>) -> Result<VaultSnapshot, String> {
                 }
             }
 
-            // Merge lists, notes, history, catalog
+            // Merge lists, notes, history, catalog, tasks, task_statuses
             let (pri_lists, sec_lists) = if remote_data.revision >= local_data.revision {
                 (&remote_data.shopping_lists, &local_data.shopping_lists)
             } else {
@@ -976,6 +1149,20 @@ pub fn sync_now(state: State<'_, VaultState>) -> Result<VaultSnapshot, String> {
             };
             let merged_cat = merge_catalog(pri_cat, sec_cat, &all_deleted_catalog);
 
+            let (pri_tasks, sec_tasks) = if remote_data.revision >= local_data.revision {
+                (&remote_data.tasks, &local_data.tasks)
+            } else {
+                (&local_data.tasks, &remote_data.tasks)
+            };
+            let merged_tasks = merge_tasks(pri_tasks, sec_tasks, &all_deleted_tasks);
+
+            let (pri_statuses, sec_statuses) = if remote_data.revision >= local_data.revision {
+                (&remote_data.task_statuses, &local_data.task_statuses)
+            } else {
+                (&local_data.task_statuses, &remote_data.task_statuses)
+            };
+            let merged_statuses = merge_task_statuses(pri_statuses, sec_statuses, &all_deleted_task_statuses);
+
             local_data.revision = std::cmp::max(local_data.revision, remote_data.revision) + 1;
             local_data.members = merged_members;
             local_data.deleted_member_ids = all_deleted.into_iter().collect();
@@ -988,6 +1175,18 @@ pub fn sync_now(state: State<'_, VaultState>) -> Result<VaultSnapshot, String> {
             local_data.deleted_history_items = all_deleted_hist.into_iter().collect();
             local_data.catalog = merged_cat;
             local_data.deleted_catalog_ids = all_deleted_catalog.into_iter().collect();
+            local_data.tasks = merged_tasks;
+            local_data.deleted_task_ids = all_deleted_tasks.into_iter().collect();
+            local_data.task_statuses = merged_statuses;
+            local_data.deleted_task_status_ids = all_deleted_task_statuses.into_iter().collect();
+
+            if remote_data.revision >= local_data.revision {
+                if remote_data.enabled_tabs.is_some() {
+                    local_data.enabled_tabs = remote_data.enabled_tabs;
+                }
+            } else if local_data.enabled_tabs.is_none() && remote_data.enabled_tabs.is_some() {
+                local_data.enabled_tabs = remote_data.enabled_tabs;
+            }
         }
     }
 
@@ -1282,6 +1481,149 @@ pub fn reorder_notes(
     mgr.seal_current()
 }
 
+#[tauri::command]
+pub fn upsert_task(
+    mut task: Task,
+    state: State<'_, VaultState>,
+) -> Result<VaultSnapshot, String> {
+    let mut mgr = state.lock().map_err(|_| "mutex_lock_failed")?;
+    let data = mgr.data.as_mut().ok_or_else(|| "vault_locked".to_string())?;
+
+    let now = now_iso();
+    if task.id.trim().is_empty() {
+        task.id = Uuid::new_v4().to_string();
+        task.created_at = now.clone();
+        if task.order == 0 && !data.tasks.is_empty() {
+            let max_order = data.tasks.iter().map(|t| t.order).max().unwrap_or(0);
+            task.order = max_order + 1;
+        }
+    }
+    task.updated_at = now;
+
+    // Un-delete if previously marked deleted
+    data.deleted_task_ids.retain(|id| id != &task.id);
+
+    if let Some(pos) = data.tasks.iter().position(|t| t.id == task.id) {
+        data.tasks[pos] = task;
+    } else {
+        data.tasks.insert(0, task);
+    }
+
+    data.revision += 1;
+    mgr.seal_current()
+}
+
+#[tauri::command]
+pub fn delete_task(
+    task_id: String,
+    state: State<'_, VaultState>,
+) -> Result<VaultSnapshot, String> {
+    let mut mgr = state.lock().map_err(|_| "mutex_lock_failed")?;
+    let data = mgr.data.as_mut().ok_or_else(|| "vault_locked".to_string())?;
+
+    data.tasks.retain(|t| t.id != task_id);
+    if !data.deleted_task_ids.contains(&task_id) {
+        data.deleted_task_ids.push(task_id);
+    }
+    data.revision += 1;
+
+    mgr.seal_current()
+}
+
+#[tauri::command]
+pub fn reorder_tasks(
+    task_ids: Vec<String>,
+    state: State<'_, VaultState>,
+) -> Result<VaultSnapshot, String> {
+    let mut mgr = state.lock().map_err(|_| "mutex_lock_failed")?;
+    let data = mgr.data.as_mut().ok_or_else(|| "vault_locked".to_string())?;
+
+    let mut new_tasks = Vec::with_capacity(data.tasks.len());
+    for (i, id) in task_ids.iter().enumerate() {
+        if let Some(idx) = data.tasks.iter().position(|t| &t.id == id) {
+            let mut task = data.tasks.remove(idx);
+            task.order = i as u64;
+            new_tasks.push(task);
+        }
+    }
+    new_tasks.append(&mut data.tasks);
+    data.tasks = new_tasks;
+    data.revision += 1;
+    mgr.seal_current()
+}
+
+#[tauri::command]
+pub fn upsert_task_status(
+    mut status: TaskStatus,
+    state: State<'_, VaultState>,
+) -> Result<VaultSnapshot, String> {
+    let mut mgr = state.lock().map_err(|_| "mutex_lock_failed")?;
+    let data = mgr.data.as_mut().ok_or_else(|| "vault_locked".to_string())?;
+
+    if status.id.trim().is_empty() {
+        status.id = Uuid::new_v4().to_string();
+        if status.order == 0 && !data.task_statuses.is_empty() {
+            let max_order = data.task_statuses.iter().map(|s| s.order).max().unwrap_or(0);
+            status.order = max_order + 1;
+        }
+    }
+
+    data.deleted_task_status_ids.retain(|id| id != &status.id);
+
+    if let Some(pos) = data.task_statuses.iter().position(|s| s.id == status.id) {
+        data.task_statuses[pos] = status;
+    } else {
+        data.task_statuses.push(status);
+    }
+    data.task_statuses.sort_by_key(|s| s.order);
+
+    data.revision += 1;
+    mgr.seal_current()
+}
+
+#[tauri::command]
+pub fn delete_task_status(
+    status_id: String,
+    fallback_status_id: Option<String>,
+    state: State<'_, VaultState>,
+) -> Result<VaultSnapshot, String> {
+    let mut mgr = state.lock().map_err(|_| "mutex_lock_failed")?;
+    let data = mgr.data.as_mut().ok_or_else(|| "vault_locked".to_string())?;
+
+    if data.task_statuses.len() <= 1 {
+        return Err("cannot_delete_last_status".to_string());
+    }
+
+    let target_status_id = if let Some(target) = fallback_status_id {
+        if target == status_id {
+            return Err("invalid_fallback_status".to_string());
+        }
+        target
+    } else {
+        data.task_statuses
+            .iter()
+            .find(|s| s.id != status_id)
+            .map(|s| s.id.clone())
+            .ok_or("no_fallback_status_available")?
+    };
+
+    let now = now_iso();
+    for task in &mut data.tasks {
+        if task.status_id == status_id {
+            task.status_id = target_status_id.clone();
+            task.updated_at = now.clone();
+        }
+    }
+
+    data.task_statuses.retain(|s| s.id != status_id);
+    if !data.deleted_task_status_ids.contains(&status_id) {
+        data.deleted_task_status_ids.push(status_id);
+    }
+
+    data.revision += 1;
+    mgr.seal_current()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1509,6 +1851,87 @@ mod tests {
         assert_eq!(new_notes[0].id, "note-3");
         assert_eq!(new_notes[1].id, "note-1");
         assert_eq!(new_notes[2].id, "note-2");
+    }
+
+    #[test]
+    fn test_enabled_tabs_serialization_and_defaults() {
+        let tabs = EnabledTabs::default();
+        assert!(tabs.lists);
+        assert!(tabs.tasks);
+        assert!(tabs.notes);
+        assert!(tabs.history);
+
+        // Deserializing empty JSON should default to true for all tabs
+        let parsed: EnabledTabs = serde_json::from_str("{}").expect("parse empty");
+        assert!(parsed.lists);
+        assert!(parsed.tasks);
+        assert!(parsed.notes);
+        assert!(parsed.history);
+
+        // Deserializing partial JSON
+        let partial: EnabledTabs = serde_json::from_str(r#"{"lists": false}"#).expect("parse partial");
+        assert!(!partial.lists);
+        assert!(partial.tasks);
+        assert!(partial.notes);
+        assert!(partial.history);
+    }
+
+    #[test]
+    fn test_merge_tasks_and_statuses_respects_tombstones() {
+        let mut deleted_tasks = HashSet::new();
+        deleted_tasks.insert("task-del".to_string());
+
+        let pri_tasks = vec![Task {
+            id: "task-1".to_string(),
+            title: "Task 1 Updated".to_string(),
+            description: "".to_string(),
+            status_id: "todo".to_string(),
+            priority: "medium".to_string(),
+            assignee: None,
+            due_date: None,
+            tags: vec![],
+            order: 0,
+            created_at: "2026-01-01T00:00:00Z".to_string(),
+            updated_at: "2026-01-02T10:00:00Z".to_string(),
+            archived: false,
+        }];
+
+        let sec_tasks = vec![
+            Task {
+                id: "task-1".to_string(),
+                title: "Task 1 Old".to_string(),
+                description: "".to_string(),
+                status_id: "todo".to_string(),
+                priority: "low".to_string(),
+                assignee: None,
+                due_date: None,
+                tags: vec![],
+                order: 0,
+                created_at: "2026-01-01T00:00:00Z".to_string(),
+                updated_at: "2026-01-01T10:00:00Z".to_string(),
+                archived: false,
+            },
+            Task {
+                id: "task-del".to_string(),
+                title: "Deleted Task".to_string(),
+                description: "".to_string(),
+                status_id: "todo".to_string(),
+                priority: "medium".to_string(),
+                assignee: None,
+                due_date: None,
+                tags: vec![],
+                order: 1,
+                created_at: "2026-01-01T00:00:00Z".to_string(),
+                updated_at: "2026-01-01T10:00:00Z".to_string(),
+                archived: false,
+            },
+        ];
+
+        let merged = merge_tasks(&pri_tasks, &sec_tasks, &deleted_tasks);
+        assert_eq!(merged.len(), 1);
+        assert_eq!(merged[0].id, "task-1");
+        assert_eq!(merged[0].title, "Task 1 Updated");
+        assert_eq!(merged[0].priority, "medium");
     }
 }
 

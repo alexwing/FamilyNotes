@@ -8,6 +8,18 @@
     />
     <link rel="icon" type="image/png" href="/icon.png" />
     <title>FamilyNotes</title>
+    <script>
+      try {
+        const s = localStorage.getItem("familynotes_ui_scale");
+        if (s && ["normal", "large", "xlarge"].includes(s)) {
+          document.documentElement.setAttribute("data-ui-scale", s);
+        }
+        const t = localStorage.getItem("familynotes_theme");
+        if (t === "dark" || (!t && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
+          document.documentElement.classList.add("dark");
+        }
+      } catch(e) {}
+    </script>
   </head>
   <body class="bg-slate-950 text-slate-100 antialiased select-none overflow-hidden">
     <div id="root"></div>

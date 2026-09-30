@@ -1,11 +1,14 @@
 import { invoke } from "@tauri-apps/api/core";
 import {
+  EnabledTabs,
   Note,
   Preferences,
   ProductCatalogItem,
   ShoppingItem,
   ShoppingList,
   SyncConfig,
+  Task,
+  TaskStatus,
   VaultData,
   VaultSnapshot,
   VaultStatus,
@@ -58,6 +61,9 @@ const Api = {
   setSyncConfig: (config: SyncConfig) =>
     invoke<VaultSnapshot>("set_sync_config", { config }),
 
+  setVaultEnabledTabs: (enabledTabs: EnabledTabs) =>
+    invoke<VaultSnapshot>("set_vault_enabled_tabs", { enabledTabs }),
+
   testSync: (config: SyncConfig) => invoke<void>("test_sync", { config }),
 
   syncNow: () => invoke<VaultSnapshot>("sync_now"),
@@ -99,6 +105,18 @@ const Api = {
     invoke<VaultSnapshot>("reorder_shopping_lists", { listIds }),
   reorderNotes: (noteIds: string[]) =>
     invoke<VaultSnapshot>("reorder_notes", { noteIds }),
+
+  // Tasks & Kanban
+  upsertTask: (task: Task) =>
+    invoke<VaultSnapshot>("upsert_task", { task }),
+  deleteTask: (taskId: string) =>
+    invoke<VaultSnapshot>("delete_task", { taskId }),
+  reorderTasks: (taskIds: string[]) =>
+    invoke<VaultSnapshot>("reorder_tasks", { taskIds }),
+  upsertTaskStatus: (status: TaskStatus) =>
+    invoke<VaultSnapshot>("upsert_task_status", { status }),
+  deleteTaskStatus: (statusId: string, fallbackStatusId?: string) =>
+    invoke<VaultSnapshot>("delete_task_status", { statusId, fallbackStatusId }),
 };
 
 export default Api;

@@ -9,6 +9,20 @@
   }
 }
 
+/* Application UI Scaling / Font Size Scaling */
+html,
+html[data-ui-scale="normal"] {
+  zoom: 1;
+}
+
+html[data-ui-scale="large"] {
+  zoom: 1.15;
+}
+
+html[data-ui-scale="xlarge"] {
+  zoom: 1.30;
+}
+
 /* Smooth check transition */
 .item-transition {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);

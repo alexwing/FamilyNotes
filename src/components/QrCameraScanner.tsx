@@ -299,11 +299,31 @@ export const QrCameraScanner: React.FC<QrCameraScannerProps> = ({
     };
   }, [isOpen, currentCameraIndex, facingMode, startCamera, stopCamera]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        stopCamera();
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, stopCamera, onClose]);
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full overflow-hidden shadow-2xl relative flex flex-col max-h-[90vh]">
+    <div
+      className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex justify-center items-start sm:items-center overflow-y-auto p-2 sm:p-4 animate-in fade-in duration-200"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          stopCamera();
+          onClose();
+        }
+      }}
+    >
+      <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full overflow-hidden shadow-2xl relative flex flex-col max-h-[calc(100%-1rem)] sm:max-h-[calc(100%-2rem)] my-auto shrink-0">
         {/* Header */}
         <div className="p-4 border-b border-slate-800/80 flex items-center justify-between bg-slate-900/90">
           <div className="flex items-center gap-2">

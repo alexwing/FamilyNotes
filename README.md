@@ -45,6 +45,19 @@
 - **Product Dictionary & Categories**: Fast autocomplete with emojis and localized categories, backed by a built-in catalog and a custom family dictionary editor.
 - **Archiving System**: Archive seasonal or completed lists into a dedicated read-only section, with the ability to unarchive or permanently delete them.
 
+### 📋 Family Tasks & Kanban Boards
+- **Dual Visualizations**: Switch seamlessly between an interactive **Kanban Board** with responsive columns and a **Structured List / Table** view with sorting and filters.
+- **Customizable Columns & Statuses**: Task statuses define the Kanban columns. Add new statuses, edit names and colors from a rich palette, mark final/completed columns, reorder columns, and safely delete them with automatic task reassignment to prevent orphaned data.
+- **HTML5 Drag-and-Drop & Note Conversion**: Drag cards smoothly between columns or reorder tasks within a column. Use the "Notes" drawer to drag any vault note directly into a Kanban column to instantly convert it into a task.
+- **Tag Filtering**: Filter tasks by tag via the toolbar dropdown or by clicking on `#tag` chips directly on Kanban cards or table rows, complete with an active filter badge and clear button.
+- **In-Place Quick Editing & Mobile Nudge**: Toggle completion status, change priorities, or nudge tasks left and right between columns directly on cards or table rows.
+- **Jira-Style Card Detail ("Ficha de Tarea")**: Click any task to open a clean, focused detail modal featuring:
+  - Title and rich Markdown description with live editor/preview tabs.
+  - Status column selector chips and 4-level Priority badges (Low 🟢, Medium 🔵, High 🟠, Urgent 🔴).
+  - Assignee picker with family member tags and freeform input.
+  - Due date selector with automatic "Due Today" and "Overdue" badges.
+  - Tag chips with instant filtering.
+
 ### 📝 Secure Family Notes
 - Create shared notes for recipes, household procedures, checklists, or private credentials.
 - Pin essential notes to the top (`Pin`).
@@ -66,6 +79,10 @@
 - **Instant QR Code Pairing**: Scan a secure QR code generated on an existing device to connect new phones or tablets in seconds.
 
 ### 🌐 Modern UI & Customization
+- **Configurable Vault Modules**: Toggle Shopping Lists, Family Notes, or Purchase History individually for each vault in Settings. Transform a vault into a pure, minimalist note-taking space or a dedicated grocery vault. Navigation bars on desktop and mobile adapt automatically, and the product dictionary icon is hidden when shopping lists are disabled.
+- **Active Tab Memory**: Automatically remembers the last tab you were using (Lists, Notes, or History) across application closures and vault switches.
+- **Text & Display Size (Accessibility)**: Choose between 3 proportional scaling levels (Normal 100%, Large 115%, Extra Large 130%) to comfortably enlarge text, icons, and interface elements without layout breakage.
+- **Global Note Open Mode Memory**: Remembers whether you prefer to open notes in editor or markdown preview mode, making browsing and reading effortless.
 - **Internationalization (i18n)**: Fully translated into English and Spanish with automatic system locale detection and manual switching.
 - **Light & Dark Modes**: Complete theme support across the entire interface and modal dialogs.
 - **Mobile-Adaptive Layout**: Responsive tab navigation (compact icon-only view on small screens) for maximum convenience.

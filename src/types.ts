@@ -34,6 +34,31 @@ export interface Note {
   tags?: string[];
 }
 
+export type TaskPriority = "low" | "medium" | "high" | "urgent";
+
+export interface TaskStatus {
+  id: string;
+  name: string;
+  color: string;
+  order: number;
+  isCompleted: boolean;
+}
+
+export interface Task {
+  id: string;
+  title: string;
+  description: string;
+  statusId: string;
+  priority: TaskPriority;
+  assignee?: string | null;
+  dueDate?: string | null;
+  tags?: string[];
+  order: number;
+  createdAt: string;
+  updatedAt: string;
+  archived?: boolean;
+}
+
 export interface PurchaseHistoryItem {
   text: string;
   emoji: string;
@@ -76,6 +101,8 @@ export interface VaultData {
   deviceName: string;
   shoppingLists: ShoppingList[];
   notes: Note[];
+  tasks?: Task[];
+  taskStatuses?: TaskStatus[];
   purchaseHistory: PurchaseHistoryItem[];
   deletedHistoryItems?: string[];
   catalog: ProductCatalogItem[];
@@ -86,6 +113,16 @@ export interface VaultData {
   deletedItemIds?: string[];
   deletedNoteIds?: string[];
   deletedCatalogIds?: string[];
+  deletedTaskIds?: string[];
+  deletedTaskStatusIds?: string[];
+  enabledTabs?: EnabledTabs;
+}
+
+export interface EnabledTabs {
+  lists: boolean;
+  tasks?: boolean;
+  notes: boolean;
+  history: boolean;
 }
 
 export interface VaultStatus {
@@ -94,6 +131,7 @@ export interface VaultStatus {
   listsCount: number;
   notesCount: number;
   itemsCount: number;
+  tasksCount?: number;
   deviceName: string;
 }
 
@@ -108,11 +146,15 @@ export interface VaultProfile {
   filePath: string;
   icon: string;
   savedMasterPassword?: string | null;
+  lastActiveTab?: "lists" | "tasks" | "notes" | "history";
+  enabledTabs?: EnabledTabs;
 }
 
 export type ThemeMode = "system" | "dark" | "light";
 export type SupportedLanguage = "en" | "es";
 export type LanguageSetting = "system" | "en" | "es";
+export type UiScale = "normal" | "large" | "xlarge";
+export type NoteEditorMode = "edit" | "preview" | "split";
 
 export interface Preferences {
   theme: string;
@@ -122,6 +164,9 @@ export interface Preferences {
   savedMasterPassword?: string | null;
   vaultFilePath?: string | null;
   activeVaultId?: string | null;
+  lastActiveTab?: "lists" | "tasks" | "notes" | "history";
+  uiScale?: UiScale;
+  noteMode?: NoteEditorMode;
   vaults: VaultProfile[];
 }
 

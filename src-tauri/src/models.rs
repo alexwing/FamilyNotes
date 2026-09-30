@@ -69,6 +69,54 @@ pub struct Note {
     pub tags: Vec<String>,
 }
 
+fn default_task_priority() -> String {
+    "medium".to_string()
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct TaskStatus {
+    #[serde(default)]
+    pub id: String,
+    #[serde(default)]
+    pub name: String,
+    #[serde(default)]
+    pub color: String,
+    #[serde(default)]
+    pub order: u32,
+    #[serde(default)]
+    pub is_completed: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct Task {
+    #[serde(default)]
+    pub id: String,
+    #[serde(default)]
+    pub title: String,
+    #[serde(default)]
+    pub description: String,
+    #[serde(default)]
+    pub status_id: String,
+    #[serde(default = "default_task_priority")]
+    pub priority: String,
+    #[serde(default)]
+    pub assignee: Option<String>,
+    #[serde(default)]
+    pub due_date: Option<String>,
+    #[serde(default)]
+    pub tags: Vec<String>,
+    #[serde(default)]
+    pub order: u64,
+    #[serde(default)]
+    pub created_at: String,
+    #[serde(default)]
+    pub updated_at: String,
+    #[serde(default)]
+    pub archived: bool,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct PurchaseHistoryItem {
@@ -133,6 +181,10 @@ pub struct VaultData {
     #[serde(default)]
     pub notes: Vec<Note>,
     #[serde(default)]
+    pub tasks: Vec<Task>,
+    #[serde(default)]
+    pub task_statuses: Vec<TaskStatus>,
+    #[serde(default)]
     pub purchase_history: Vec<PurchaseHistoryItem>,
     #[serde(default)]
     pub deleted_history_items: Vec<String>,
@@ -152,6 +204,40 @@ pub struct VaultData {
     pub deleted_note_ids: Vec<String>,
     #[serde(default)]
     pub deleted_catalog_ids: Vec<String>,
+    #[serde(default)]
+    pub deleted_task_ids: Vec<String>,
+    #[serde(default)]
+    pub deleted_task_status_ids: Vec<String>,
+    #[serde(default)]
+    pub enabled_tabs: Option<EnabledTabs>,
+}
+
+fn default_true() -> bool {
+    true
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct EnabledTabs {
+    #[serde(default = "default_true")]
+    pub lists: bool,
+    #[serde(default = "default_true")]
+    pub tasks: bool,
+    #[serde(default = "default_true")]
+    pub notes: bool,
+    #[serde(default = "default_true")]
+    pub history: bool,
+}
+
+impl Default for EnabledTabs {
+    fn default() -> Self {
+        Self {
+            lists: true,
+            tasks: true,
+            notes: true,
+            history: true,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -174,6 +260,10 @@ pub struct VaultProfile {
     pub icon: String,
     #[serde(default)]
     pub saved_master_password: Option<String>,
+    #[serde(default)]
+    pub last_active_tab: Option<String>,
+    #[serde(default)]
+    pub enabled_tabs: Option<EnabledTabs>,
 }
 
 fn default_sync_config() -> SyncConfig {
@@ -225,6 +315,8 @@ pub struct VaultStatus {
     pub lists_count: usize,
     pub notes_count: usize,
     pub items_count: usize,
+    #[serde(default)]
+    pub tasks_count: usize,
     pub device_name: String,
 }
 
@@ -233,6 +325,14 @@ pub struct VaultStatus {
 pub struct VaultSnapshot {
     pub status: VaultStatus,
     pub contents: String,
+}
+
+fn default_ui_scale() -> String {
+    "normal".to_string()
+}
+
+fn default_note_mode() -> String {
+    "edit".to_string()
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -247,6 +347,12 @@ pub struct Preferences {
     #[serde(default)]
     pub active_vault_id: Option<String>,
     #[serde(default)]
+    pub last_active_tab: Option<String>,
+    #[serde(default = "default_ui_scale")]
+    pub ui_scale: String,
+    #[serde(default = "default_note_mode")]
+    pub note_mode: String,
+    #[serde(default)]
     pub vaults: Vec<VaultProfile>,
 }
 
@@ -260,6 +366,9 @@ impl Default for Preferences {
             saved_master_password: None,
             vault_file_path: None,
             active_vault_id: None,
+            last_active_tab: None,
+            ui_scale: "normal".to_string(),
+            note_mode: "edit".to_string(),
             vaults: Vec::new(),
         }
     }

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from "react";
+import React, { useState, useRef, useMemo, useEffect } from "react";
 import {
   Plus,
   Trash2,
@@ -22,6 +22,7 @@ import {
   X,
   ChevronDown,
   GripVertical,
+  Kanban,
 } from "lucide-react";
 import { Note } from "../types";
 import { useTranslation } from "../context/LanguageContext";
@@ -34,6 +35,9 @@ interface NotesViewProps {
   onArchiveNote?: (id: string) => void;
   onUnarchiveNote?: (id: string) => void;
   onReorderNotes?: (noteIds: string[]) => void;
+  defaultNoteMode?: "edit" | "preview" | "split";
+  onNoteModeChange?: (mode: "edit" | "preview" | "split") => void;
+  onCreateTaskFromNote?: (note: Note) => void;
 }
 
 export const NotesView: React.FC<NotesViewProps> = ({
@@ -43,6 +47,9 @@ export const NotesView: React.FC<NotesViewProps> = ({
   onArchiveNote,
   onUnarchiveNote,
   onReorderNotes,
+  defaultNoteMode,
+  onNoteModeChange,
+  onCreateTaskFromNote,
 }) => {
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
@@ -59,10 +66,25 @@ export const NotesView: React.FC<NotesViewProps> = ({
   const [editingNote, setEditingNote] = useState<Note | null>(null);
   const [tagInput, setTagInput] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editorTab, setEditorTab] = useState<"edit" | "preview" | "split">("edit");
+  const [editorTab, setEditorTab] = useState<"edit" | "preview" | "split">(() => {
+    try {
+      const saved = localStorage.getItem("familynotes_note_mode");
+      if (saved === "edit" || saved === "preview" || saved === "split") return saved as "edit" | "preview" | "split";
+    } catch {}
+    return defaultNoteMode || "edit";
+  });
+
+  const handleSetEditorTab = (tab: "edit" | "preview" | "split") => {
+    setEditorTab(tab);
+    try {
+      localStorage.setItem("familynotes_note_mode", tab);
+    } catch {}
+    onNoteModeChange?.(tab);
+  };
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [pendingDeleteNote, setPendingDeleteNote] = useState<Note | null>(null);
   const [lastDeletedNote, setLastDeletedNote] = useState<Note | null>(null);
+  const isBackdropMouseDownRef = useRef(false);
 
   // Drag and drop state for reordering
   const [orderedActiveNoteIds, setOrderedActiveNoteIds] = useState<string[] | null>(null);
@@ -115,6 +137,23 @@ export const NotesView: React.FC<NotesViewProps> = ({
     const current = new Set((editingNote.tags || []).map((t) => t.toLowerCase()));
     return allAvailableTags.filter((t) => !current.has(t.toLowerCase())).slice(0, 6);
   }, [allAvailableTags, editingNote]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (pendingDeleteNote) {
+          setPendingDeleteNote(null);
+        } else if (isModalOpen) {
+          setIsModalOpen(false);
+          setEditingNote(null);
+        } else if (isTagMenuOpen) {
+          setIsTagMenuOpen(false);
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [pendingDeleteNote, isModalOpen, isTagMenuOpen]);
 
   const handleAddTag = (rawTag: string) => {
     const clean = rawTag.trim().replace(/^#/, "");
@@ -339,7 +378,16 @@ export const NotesView: React.FC<NotesViewProps> = ({
       tags: [],
     });
     setTagInput("");
-    setEditorTab("edit");
+    try {
+      const saved = localStorage.getItem("familynotes_note_mode");
+      if (saved === "split") {
+        setEditorTab("split");
+      } else {
+        setEditorTab("edit");
+      }
+    } catch {
+      setEditorTab("edit");
+    }
     setIsModalOpen(true);
   };
 
@@ -349,7 +397,14 @@ export const NotesView: React.FC<NotesViewProps> = ({
       tags: note.tags || [],
     });
     setTagInput("");
-    setEditorTab("edit");
+    try {
+      const saved = localStorage.getItem("familynotes_note_mode");
+      if (saved === "edit" || saved === "preview" || saved === "split") {
+        setEditorTab(saved as "edit" | "preview" | "split");
+      } else if (defaultNoteMode) {
+        setEditorTab(defaultNoteMode);
+      }
+    } catch {}
     setIsModalOpen(true);
   };
 
@@ -678,6 +733,20 @@ export const NotesView: React.FC<NotesViewProps> = ({
                   <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800/80 text-[10px] text-slate-400 dark:text-slate-500">
                     <span>{formatNoteDate(note.updatedAt || note.createdAt)}</span>
                     <div className="flex items-center gap-1 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                      {onCreateTaskFromNote && (
+                        <button
+                          type="button"
+                          data-no-drag
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onCreateTaskFromNote(note);
+                          }}
+                          className="p-1 text-slate-400 hover:text-emerald-500 cursor-pointer transition rounded hover:bg-emerald-500/10"
+                          title={t("tasks.createTaskFromNote")}
+                        >
+                          <Kanban size={13} />
+                        </button>
+                      )}
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -765,6 +834,20 @@ export const NotesView: React.FC<NotesViewProps> = ({
                         <span className="text-[11px] text-slate-400 dark:text-slate-500 hidden sm:inline">
                           {formatNoteDate(note.updatedAt)}
                         </span>
+                      )}
+                      {onCreateTaskFromNote && (
+                        <button
+                          type="button"
+                          data-no-drag
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onCreateTaskFromNote(note);
+                          }}
+                          className="p-1.5 text-slate-400 hover:text-emerald-500 transition cursor-pointer rounded-lg hover:bg-emerald-500/10"
+                          title={t("tasks.createTaskFromNote")}
+                        >
+                          <Kanban size={15} />
+                        </button>
                       )}
                       <button
                         onClick={(e) => {
@@ -940,7 +1023,7 @@ export const NotesView: React.FC<NotesViewProps> = ({
       )}
 
       {lastDeletedNote && (
-        <div className="fixed bottom-4 right-4 z-50 max-w-sm w-[calc(100%-2rem)] rounded-2xl border border-amber-500/30 bg-white/95 dark:bg-slate-900/95 p-3 shadow-2xl shadow-amber-950/30 backdrop-blur-sm">
+        <div className="fixed bottom-20 md:bottom-4 right-4 z-50 max-w-sm w-[calc(100%-2rem)] rounded-2xl border border-amber-500/30 bg-white/95 dark:bg-slate-900/95 p-3 shadow-2xl shadow-amber-950/30 backdrop-blur-sm">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-amber-600 dark:text-amber-400">
@@ -979,8 +1062,19 @@ export const NotesView: React.FC<NotesViewProps> = ({
 
       {/* CONFIRM DELETE OR ARCHIVE DIALOGUE */}
       {pendingDeleteNote && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 max-w-md w-full space-y-4 shadow-2xl text-slate-900 dark:text-white">
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-center items-start sm:items-center overflow-y-auto p-2 sm:p-4"
+          onMouseDown={(e) => {
+            isBackdropMouseDownRef.current = e.target === e.currentTarget;
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && isBackdropMouseDownRef.current) {
+              setPendingDeleteNote(null);
+            }
+            isBackdropMouseDownRef.current = false;
+          }}
+        >
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-5 max-w-md w-full space-y-4 shadow-2xl text-slate-900 dark:text-white my-auto shrink-0 max-h-[calc(100%-1rem)] overflow-y-auto">
             <div>
               <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-rose-500">
                 {pendingDeleteNote.archived ? t("common.delete") : t("common.archive")}
@@ -1033,32 +1127,67 @@ export const NotesView: React.FC<NotesViewProps> = ({
 
       {/* EDIT / CREATE MODAL */}
       {isModalOpen && editingNote && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center md:p-4">
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-center items-start sm:items-center overflow-y-auto p-2 sm:p-4"
+          onMouseDown={(e) => {
+            isBackdropMouseDownRef.current = e.target === e.currentTarget;
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && isBackdropMouseDownRef.current) {
+              setIsModalOpen(false);
+              setEditingNote(null);
+            }
+            isBackdropMouseDownRef.current = false;
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Delete" || e.key === "Backspace") {
+              e.stopPropagation();
+            }
+          }}
+        >
           <form
             onSubmit={handleSubmit}
-            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 md:rounded-2xl p-5 w-[95vw] max-w-3xl md:max-w-4xl lg:max-w-5xl h-[92vh] md:h-[85vh] flex flex-col gap-3 md:shadow-2xl overflow-hidden text-slate-900 dark:text-white"
+            onKeyDown={(e) => {
+              if (e.key === "Delete" || e.key === "Backspace") {
+                e.stopPropagation();
+              }
+            }}
+            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-5 w-[96vw] max-w-3xl md:max-w-4xl lg:max-w-5xl max-h-[calc(100%-1rem)] sm:max-h-[calc(100%-2rem)] h-full my-auto shrink-0 flex flex-col gap-3 shadow-2xl overflow-hidden text-slate-900 dark:text-white"
           >
             <div className="flex items-center justify-between shrink-0">
               <h3 className="text-sm font-bold">
                 {editingNote.id ? t("notes.editModalTitle") : t("notes.createModalTitle")}
               </h3>
-              <button
-                type="button"
-                onClick={() =>
-                  setEditingNote({
-                    ...editingNote,
-                    pinned: !editingNote.pinned,
-                  })
-                }
-                className={`p-1.5 rounded-lg border text-xs flex items-center gap-1 cursor-pointer ${
-                  editingNote.pinned
-                    ? "bg-amber-400/10 border-amber-400/30 text-amber-600 dark:text-amber-300"
-                    : "border-slate-300 dark:border-slate-800 text-slate-500 dark:text-slate-400"
-                }`}
-              >
-                <Pin size={13} />
-                <span>{editingNote.pinned ? t("notes.unpinNote") : t("notes.pinNote")}</span>
-              </button>
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setEditingNote({
+                      ...editingNote,
+                      pinned: !editingNote.pinned,
+                    })
+                  }
+                  className={`p-1.5 rounded-lg border text-xs flex items-center gap-1 cursor-pointer ${
+                    editingNote.pinned
+                      ? "bg-amber-400/10 border-amber-400/30 text-amber-600 dark:text-amber-300"
+                      : "border-slate-300 dark:border-slate-800 text-slate-500 dark:text-slate-400"
+                  }`}
+                >
+                  <Pin size={13} />
+                  <span>{editingNote.pinned ? t("notes.unpinNote") : t("notes.pinNote")}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    setEditingNote(null);
+                  }}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                  title={t("common.close")}
+                >
+                  <X size={16} />
+                </button>
+              </div>
             </div>
 
             <div className="shrink-0">
@@ -1090,7 +1219,7 @@ export const NotesView: React.FC<NotesViewProps> = ({
                 <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg text-[11px]">
                   <button
                     type="button"
-                    onClick={() => setEditorTab("edit")}
+                    onClick={() => handleSetEditorTab("edit")}
                     className={`flex items-center gap-1 px-2 py-0.5 rounded-md font-medium transition cursor-pointer ${
                       editorTab === "edit"
                         ? "bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-xs"
@@ -1102,7 +1231,7 @@ export const NotesView: React.FC<NotesViewProps> = ({
                   </button>
                   <button
                     type="button"
-                    onClick={() => setEditorTab("preview")}
+                    onClick={() => handleSetEditorTab("preview")}
                     className={`flex items-center gap-1 px-2 py-0.5 rounded-md font-medium transition cursor-pointer ${
                       editorTab === "preview"
                         ? "bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-xs"
@@ -1114,7 +1243,7 @@ export const NotesView: React.FC<NotesViewProps> = ({
                   </button>
                   <button
                     type="button"
-                    onClick={() => setEditorTab("split")}
+                    onClick={() => handleSetEditorTab("split")}
                     className={`hidden md:flex items-center gap-1 px-2 py-0.5 rounded-md font-medium transition cursor-pointer ${
                       editorTab === "split"
                         ? "bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-xs"
@@ -1242,6 +1371,22 @@ export const NotesView: React.FC<NotesViewProps> = ({
                   >
                     <Archive size={13} />
                     <span className="hidden sm:inline">{t("notes.archiveNoteBtn")}</span>
+                  </button>
+                )}
+
+                {editingNote.id && onCreateTaskFromNote && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onCreateTaskFromNote(editingNote);
+                      setIsModalOpen(false);
+                      setEditingNote(null);
+                    }}
+                    className="px-3 py-1.5 rounded-xl text-xs text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/10 border border-emerald-500/25 font-semibold flex items-center gap-1.5 shrink-0 cursor-pointer"
+                    title={t("tasks.createTaskFromNote")}
+                  >
+                    <Kanban size={13} />
+                    <span className="hidden sm:inline">{t("tasks.createTaskFromNote")}</span>
                   </button>
                 )}
 

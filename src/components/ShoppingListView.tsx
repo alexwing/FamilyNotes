@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   Plus,
   Trash2,
@@ -64,6 +64,20 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
   const [editName, setEditName] = useState("");
   const [editColor, setEditColor] = useState("#10b981");
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (isCreatingList) {
+          setIsCreatingList(false);
+        } else if (editingList) {
+          setEditingList(null);
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isCreatingList, editingList]);
 
   const handleOpenEditList = (list: ShoppingList) => {
     setEditingList(list);
@@ -506,10 +520,15 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
 
       {/* CREATE LIST MODAL */}
       {isCreatingList && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-center items-start sm:items-center overflow-y-auto p-2 sm:p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsCreatingList(false);
+          }}
+        >
           <form
             onSubmit={handleCreateListSubmit}
-            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 max-w-sm w-full space-y-4 shadow-2xl text-slate-900 dark:text-white"
+            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-5 max-w-sm w-full space-y-4 shadow-2xl text-slate-900 dark:text-white my-auto shrink-0 max-h-[calc(100%-1rem)] overflow-y-auto"
           >
             <h3 className="text-sm font-bold">{t("lists.createModalTitle")}</h3>
             <div>
@@ -560,8 +579,13 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
 
       {/* EDIT LIST MODAL */}
       {editingList && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 max-w-sm w-full space-y-4 shadow-2xl text-slate-900 dark:text-white">
+        <div
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex justify-center items-start sm:items-center overflow-y-auto p-2 sm:p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setEditingList(null);
+          }}
+        >
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 sm:p-5 max-w-sm w-full space-y-4 shadow-2xl text-slate-900 dark:text-white my-auto shrink-0 max-h-[calc(100%-1rem)] overflow-y-auto">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold flex items-center gap-2">
                 <Edit3 size={16} className="text-emerald-500" />

@@ -179,8 +179,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl relative overflow-hidden">
+    <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex justify-center items-start sm:items-center overflow-y-auto p-2 sm:p-4">
+      <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-5 sm:p-8 shadow-2xl relative my-auto shrink-0 max-h-[calc(100%-1rem)] sm:max-h-[calc(100%-2rem)] overflow-y-auto">
         {/* VIEW 1: CREATE NEW VAULT */}
         {mode === "create" && (
           <div>
