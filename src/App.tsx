@@ -334,13 +334,17 @@ export function App() {
       const saved = localStorage.getItem("fn_window_state");
       if (saved) {
         try {
-          const { isMaximized, isFullscreen } = JSON.parse(saved);
+          const { isFullscreen } = JSON.parse(saved);
           if (isFullscreen) {
             void appWindow.setFullscreen(true);
-          } else if (isMaximized) {
+          } else {
             void appWindow.maximize();
           }
-        } catch {}
+        } catch {
+          void appWindow.maximize();
+        }
+      } else {
+        void appWindow.maximize();
       }
 
       let timer: ReturnType<typeof setTimeout>;

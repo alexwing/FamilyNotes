@@ -51,17 +51,52 @@ export const MarkdownContent: React.FC<MarkdownContentProps> = ({
           p: ({ children }) => (
             <p className="mb-1.5 last:mb-0 leading-relaxed">{children}</p>
           ),
-          ul: ({ children }) => (
-            <ul className="list-disc list-inside space-y-0.5 my-1 pl-1">
-              {children}
-            </ul>
-          ),
+          ul: ({ className: ulClassName, children }) => {
+            const isTaskList = ulClassName?.includes("contains-task-list");
+            if (isTaskList) {
+              return (
+                <ul
+                  className={`list-none pl-0 ${
+                    isCompact ? "space-y-0.5 my-1" : "space-y-1 my-1.5"
+                  }`}
+                >
+                  {children}
+                </ul>
+              );
+            }
+            return (
+              <ul
+                className={`list-disc list-outside pl-5 ${
+                  isCompact ? "space-y-0.5 my-1" : "space-y-1 my-1.5"
+                }`}
+              >
+                {children}
+              </ul>
+            );
+          },
           ol: ({ children }) => (
-            <ol className="list-decimal list-inside space-y-0.5 my-1 pl-1">
+            <ol
+              className={`list-decimal list-outside pl-5 ${
+                isCompact ? "space-y-0.5 my-1" : "space-y-1 my-1.5"
+              }`}
+            >
               {children}
             </ol>
           ),
-          li: ({ children }) => <li className="leading-relaxed">{children}</li>,
+          li: ({ className: liClassName, children }) => {
+            const isTaskItem = liClassName?.includes("task-list-item");
+            return (
+              <li
+                className={`leading-relaxed ${
+                  isTaskItem
+                    ? "list-none flex items-start gap-2"
+                    : "[&>p]:mb-1 [&>p:last-child]:mb-0"
+                }`}
+              >
+                {children}
+              </li>
+            );
+          },
           blockquote: ({ children }) => (
             <blockquote className="border-l-2 border-emerald-500/70 pl-2.5 py-0.5 my-1.5 bg-emerald-500/5 text-slate-600 dark:text-slate-400 italic rounded-r">
               {children}
@@ -112,7 +147,7 @@ export const MarkdownContent: React.FC<MarkdownContentProps> = ({
                   type="checkbox"
                   checked={!!checked}
                   readOnly
-                  className="mr-1.5 inline-block align-middle accent-emerald-500 rounded cursor-default"
+                  className="mt-0.5 accent-emerald-500 rounded cursor-default shrink-0"
                   {...props}
                 />
               );

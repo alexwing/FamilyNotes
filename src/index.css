@@ -49,3 +49,21 @@ html[data-ui-scale="xlarge"] {
 .dark ::-webkit-scrollbar-thumb:hover {
   background: #475569;
 }
+
+/* Markdown lists styling */
+.markdown-content ul {
+  list-style-type: disc;
+}
+.markdown-content ul ul {
+  list-style-type: circle;
+}
+.markdown-content ul ul ul {
+  list-style-type: square;
+}
+.markdown-content ol {
+  list-style-type: decimal;
+}
+.markdown-content ul.contains-task-list,
+.markdown-content li.task-list-item {
+  list-style-type: none;
+}
