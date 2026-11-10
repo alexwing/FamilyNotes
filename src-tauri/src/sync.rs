@@ -168,8 +168,22 @@ fn enter_dir_with(ftp: &mut FtpStream, dir: &str, create: bool) -> Result<(), St
 pub fn test_connection(cfg: &SyncConfig) -> Result<(), String> {
     let mut ftp = connect(cfg)?;
     enter_dir(&mut ftp, &cfg.remote_dir)?;
+    // Exercise the (TLS) data channel too: a listing needs a passive
+    // connection, exactly like downloads and uploads do.
+    list_names(&mut ftp)?;
     let _ = ftp.quit();
     Ok(())
+}
+
+/// Bare file names in the current directory (data channel + PROT P).
+fn list_names(ftp: &mut FtpStream) -> Result<Vec<String>, String> {
+    let names = ftp
+        .nlst(None)
+        .map_err(|e| format!("sync_list_failed: {}", e))?;
+    Ok(names
+        .iter()
+        .filter_map(|n| n.rsplit('/').next().map(|s| s.trim().to_string()))
+        .collect())
 }
 
 pub fn download(cfg: &SyncConfig) -> Result<Option<Vec<u8>>, String> {
@@ -177,10 +191,7 @@ pub fn download(cfg: &SyncConfig) -> Result<Option<Vec<u8>>, String> {
     enter_dir(&mut ftp, &cfg.remote_dir)?;
     let file = remote_file(cfg);
 
-    let names = ftp.nlst(None).unwrap_or_default();
-    let exists = names
-        .iter()
-        .any(|name| name.rsplit('/').next().map(str::trim) == Some(file.as_str()));
+    let exists = list_names(&mut ftp)?.iter().any(|name| name == &file);
 
     let bytes = if exists {
         let cursor = ftp
@@ -198,8 +209,13 @@ pub fn upload(cfg: &SyncConfig, bytes: &[u8]) -> Result<(), String> {
     let mut ftp = connect(cfg)?;
     enter_dir(&mut ftp, &cfg.remote_dir)?;
 
-    let mut guard = Cursor::new(HTACCESS.as_bytes());
-    let _ = ftp.put_file(".htaccess", &mut guard);
+    // Only add the deny-all guard where there is no .htaccess yet: never
+    // overwrite one that already exists (e.g. a site's, if the vault lives
+    // in a web root).
+    if !list_names(&mut ftp)?.iter().any(|n| n == ".htaccess") {
+        let mut guard = Cursor::new(HTACCESS.as_bytes());
+        let _ = ftp.put_file(".htaccess", &mut guard);
+    }
 
     let mut reader = Cursor::new(bytes);
     ftp.put_file(remote_file(cfg), &mut reader)
