@@ -52,7 +52,6 @@ export const ProductCatalogModal: React.FC<ProductCatalogModalProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
-  if (!isOpen) return null;
 
   // Filter items
   const q = search.trim().toLowerCase();

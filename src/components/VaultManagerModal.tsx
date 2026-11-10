@@ -52,7 +52,6 @@ export const VaultManagerModal: React.FC<VaultManagerModalProps> = ({
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  if (!isOpen) return null;
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
