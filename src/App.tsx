@@ -697,21 +697,14 @@ export function App() {
 
   // Multi-Vault: Switch Vault
   const handleSelectVault = async (vault: VaultProfile) => {
-    if (isUnlocked) {
-      await Api.lockVault();
-      setIsUnlocked(false);
-      setVaultData(null);
-    }
-
-    vaultPathRef.current = vault.filePath;
+    // Re-selecting the vault that is already open: nothing to do.
+    if (isUnlocked && vault.id === preferences.activeVaultId) return;
 
     const updatedPrefs: Preferences = {
       ...preferences,
       activeVaultId: vault.id,
       vaultFilePath: vault.filePath,
     };
-    await Api.savePreferences(updatedPrefs);
-    setPreferences(updatedPrefs);
 
     // Restore vault's last active tab
     const savedVaultTab =
@@ -719,14 +712,19 @@ export function App() {
       vault.lastActiveTab ||
       localStorage.getItem("familynotes_last_active_tab");
     const validTab = resolveValidTab(savedVaultTab, vault.enabledTabs);
-    setActiveTab(validTab);
 
-    // Try auto-unlock if password saved
+    // Try to open the target vault with its saved password BEFORE touching the
+    // current session, so a successful switch never flashes the lock screen.
+    // unlock_vault only replaces the backend state once decryption succeeds.
     const pass = vault.savedMasterPassword || preferences.savedMasterPassword;
     if (pass) {
       try {
         const contents = await Api.readVaultFile(vault.filePath);
         await Api.unlockVault(contents, pass);
+        vaultPathRef.current = vault.filePath;
+        await Api.savePreferences(updatedPrefs);
+        setPreferences(updatedPrefs);
+        setActiveTab(validTab);
         setIsUnlocked(true);
         await refreshVaultData();
         void performSync(true);
@@ -737,8 +735,16 @@ export function App() {
       }
     }
 
-    // Prompt password
-    setIsUnlocked(false);
+    // No saved password (or it failed): lock and ask for it.
+    if (isUnlocked) {
+      await Api.lockVault();
+      setIsUnlocked(false);
+      setVaultData(null);
+    }
+    vaultPathRef.current = vault.filePath;
+    await Api.savePreferences(updatedPrefs);
+    setPreferences(updatedPrefs);
+    setActiveTab(validTab);
     setManualUnlockPassword("");
   };
 

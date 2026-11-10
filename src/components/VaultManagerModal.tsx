@@ -208,10 +208,8 @@ export const VaultManagerModal: React.FC<VaultManagerModalProps> = ({
                   >
                     <div
                       onClick={() => {
-                        if (!isActive) {
-                          void onSelectVault(v);
-                          onClose();
-                        }
+                        void onSelectVault(v);
+                        onClose();
                       }}
                       className="flex items-center gap-3 cursor-pointer flex-1 min-w-0"
                     >
