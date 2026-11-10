@@ -521,7 +521,7 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
       {/* CREATE LIST MODAL */}
       {isCreatingList && (
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-center items-start sm:items-center overflow-y-auto p-2 sm:p-4"
+          className="fixed inset-0 top-[var(--tb)] bg-black/60 backdrop-blur-sm z-50 flex justify-center items-start sm:items-center overflow-y-auto p-2 sm:p-4"
           onClick={(e) => {
             if (e.target === e.currentTarget) setIsCreatingList(false);
           }}
@@ -580,7 +580,7 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
       {/* EDIT LIST MODAL */}
       {editingList && (
         <div
-          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex justify-center items-start sm:items-center overflow-y-auto p-2 sm:p-4"
+          className="fixed inset-0 top-[var(--tb)] bg-black/70 backdrop-blur-sm z-50 flex justify-center items-start sm:items-center overflow-y-auto p-2 sm:p-4"
           onClick={(e) => {
             if (e.target === e.currentTarget) setEditingList(null);
           }}

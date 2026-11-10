@@ -179,7 +179,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex justify-center items-start sm:items-center overflow-y-auto p-2 sm:p-4">
+    <div className="fixed inset-0 top-[var(--tb)] bg-slate-950/90 backdrop-blur-md z-50 flex justify-center items-start sm:items-center overflow-y-auto p-2 sm:p-4">
       <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-5 sm:p-8 shadow-2xl relative my-auto shrink-0 max-h-[calc(100%-1rem)] sm:max-h-[calc(100%-2rem)] overflow-y-auto">
         {/* VIEW 1: CREATE NEW VAULT */}
         {mode === "create" && (
@@ -203,7 +203,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                 <img src="/icon.png" alt="FamilyNotes" className="w-14 h-14 rounded-2xl mx-auto shadow-lg shadow-emerald-500/20" />
 
                 <div>
-                  <h2 className="text-xl font-bold text-white tracking-tight">
+                  <h2 className="text-xl font-serif font-semibold text-white tracking-tight">
                     {t("onboarding.welcomeTitle")}
                   </h2>
                   <p className="text-xs text-slate-400 mt-1">
@@ -259,7 +259,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                   <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-2xl mx-auto border border-emerald-500/20">
                     <ShieldCheck size={26} />
                   </div>
-                  <h2 className="text-lg font-bold text-white tracking-tight">
+                  <h2 className="text-lg font-serif font-semibold text-white tracking-tight">
                     {t("onboarding.createPassTitle")}
                   </h2>
                   <p className="text-xs text-slate-400">
@@ -338,7 +338,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
               <div className="w-12 h-12 rounded-2xl bg-purple-500/10 text-purple-400 flex items-center justify-center text-2xl mx-auto border border-purple-500/20">
                 <QrCode size={26} />
               </div>
-              <h2 className="text-lg font-bold text-white tracking-tight">
+              <h2 className="text-lg font-serif font-semibold text-white tracking-tight">
                 {t("onboarding.linkQrTitle")}
               </h2>
               <p className="text-xs text-slate-400">

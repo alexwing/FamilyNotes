@@ -52,7 +52,7 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
           <img src="/icon.png" alt="FamilyNotes" className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl shadow-lg shadow-emerald-500/20 shrink-0" />
           <div className="min-w-0">
-            <h1 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white tracking-tight truncate">
+            <h1 className="text-sm sm:text-base font-serif font-semibold text-slate-900 dark:text-white tracking-tight truncate">
               FamilyNotes
             </h1>
             <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">

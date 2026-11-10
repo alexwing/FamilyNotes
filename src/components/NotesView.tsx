@@ -569,7 +569,7 @@ export const NotesView: React.FC<NotesViewProps> = ({
             {isTagMenuOpen && (
               <>
                 <div
-                  className="fixed inset-0 z-30"
+                  className="fixed inset-0 top-[var(--tb)] z-30"
                   onClick={() => setIsTagMenuOpen(false)}
                 />
                 <div className="absolute right-0 top-full mt-2 w-52 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-1.5 shadow-2xl z-40 space-y-1">
@@ -1063,7 +1063,7 @@ export const NotesView: React.FC<NotesViewProps> = ({
       {/* CONFIRM DELETE OR ARCHIVE DIALOGUE */}
       {pendingDeleteNote && (
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-center items-start sm:items-center overflow-y-auto p-2 sm:p-4"
+          className="fixed inset-0 top-[var(--tb)] bg-black/60 backdrop-blur-sm z-50 flex justify-center items-start sm:items-center overflow-y-auto p-2 sm:p-4"
           onMouseDown={(e) => {
             isBackdropMouseDownRef.current = e.target === e.currentTarget;
           }}
@@ -1128,7 +1128,7 @@ export const NotesView: React.FC<NotesViewProps> = ({
       {/* EDIT / CREATE MODAL */}
       {isModalOpen && editingNote && (
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-center items-start sm:items-center overflow-y-auto p-2 sm:p-4"
+          className="fixed inset-0 top-[var(--tb)] bg-black/60 backdrop-blur-sm z-50 flex justify-center items-start sm:items-center overflow-y-auto p-2 sm:p-4"
           onMouseDown={(e) => {
             isBackdropMouseDownRef.current = e.target === e.currentTarget;
           }}

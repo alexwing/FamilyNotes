@@ -1479,7 +1479,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-center items-start sm:items-center overflow-y-auto p-2 sm:p-4"
+      className="fixed inset-0 top-[var(--tb)] bg-black/60 backdrop-blur-sm z-50 flex justify-center items-start sm:items-center overflow-y-auto p-2 sm:p-4"
       onMouseDown={(e) => {
         isBackdropMouseDownRef.current = e.target === e.currentTarget;
       }}
@@ -1892,7 +1892,7 @@ const ColumnManagerModal: React.FC<ColumnManagerModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-center items-start sm:items-center overflow-y-auto p-2 sm:p-4"
+      className="fixed inset-0 top-[var(--tb)] bg-black/60 backdrop-blur-sm z-50 flex justify-center items-start sm:items-center overflow-y-auto p-2 sm:p-4"
       onMouseDown={(e) => {
         isBackdropMouseDownRef.current = e.target === e.currentTarget;
       }}

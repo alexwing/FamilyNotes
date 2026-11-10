@@ -242,7 +242,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex justify-center items-start sm:items-center overflow-y-auto p-2 sm:p-4"
+      className="fixed inset-0 top-[var(--tb)] bg-black/75 backdrop-blur-sm z-50 flex justify-center items-start sm:items-center overflow-y-auto p-2 sm:p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -251,7 +251,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         {/* Modal Header */}
         <div className="px-5 sm:px-6 py-3.5 sm:py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0 bg-white dark:bg-slate-900">
           <div className="flex items-center gap-2">
-            <h3 className="text-base font-bold text-slate-900 dark:text-white">{t("settings.title")}</h3>
+            <h3 className="text-base font-serif font-semibold text-slate-900 dark:text-white">{t("settings.title")}</h3>
             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
               FamilyNotes
             </span>
@@ -1082,7 +1082,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         {/* QR MODAL VIEWER */}
         {showQrModal && (
           <div
-            className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex justify-center items-start sm:items-center overflow-y-auto p-2 sm:p-4"
+            className="fixed inset-0 top-[var(--tb)] bg-black/85 backdrop-blur-md z-50 flex justify-center items-start sm:items-center overflow-y-auto p-2 sm:p-4"
             onClick={(e) => {
               if (e.target === e.currentTarget) setShowQrModal(false);
             }}

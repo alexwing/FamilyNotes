@@ -1591,14 +1591,14 @@ export function App() {
   // Render App Initializing Splash (prevents password screen flicker during auto-unlock)
   if (isInitializing) {
     return (
-      <div className="fixed inset-0 bg-slate-100 dark:bg-slate-950 flex flex-col items-center justify-center p-4 transition-colors z-50">
+      <div className="fixed inset-0 top-[var(--tb)] bg-slate-100 dark:bg-slate-950 flex flex-col items-center justify-center p-4 transition-colors z-50">
         <div className="flex flex-col items-center space-y-4 animate-in fade-in duration-300">
           <img
             src="/icon.png"
             alt="FamilyNotes"
             className="w-20 h-20 rounded-3xl shadow-xl shadow-emerald-500/25 animate-pulse"
           />
-          <h1 className="text-xl font-bold text-slate-800 dark:text-white tracking-tight">FamilyNotes</h1>
+          <h1 className="text-xl font-serif font-semibold text-slate-800 dark:text-white tracking-tight">FamilyNotes</h1>
           <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
         </div>
       </div>
@@ -1608,7 +1608,7 @@ export function App() {
   // Render Manual Unlock Screen
   if (!isUnlocked) {
     return (
-      <div className="fixed inset-0 bg-slate-100 dark:bg-slate-950 flex flex-col justify-start sm:justify-center items-center overflow-y-auto p-4 transition-colors z-50">
+      <div className="fixed inset-0 top-[var(--tb)] bg-slate-100 dark:bg-slate-950 flex flex-col justify-start sm:justify-center items-center overflow-y-auto p-4 transition-colors z-50">
         <form
           onSubmit={handleManualUnlock}
           className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 max-w-sm w-full space-y-4 shadow-2xl text-center animate-in fade-in duration-200 text-slate-900 dark:text-white my-auto shrink-0 max-h-[calc(100%-1rem)] overflow-y-auto"
@@ -1685,7 +1685,7 @@ export function App() {
   }).length;
 
   return (
-    <div className="fixed inset-0 bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col overflow-hidden transition-colors">
+    <div className="fixed inset-0 top-[var(--tb)] bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col overflow-hidden transition-colors">
       {/* Top Header */}
       <Header
         activeTab={activeTab}

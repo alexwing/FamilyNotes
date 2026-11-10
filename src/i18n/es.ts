@@ -22,6 +22,11 @@ const es = {
     paste: "Pegar",
     myDevice: "Mi Dispositivo",
   },
+  window: {
+    minimize: "Minimizar",
+    maximize: "Maximizar",
+    restore: "Restaurar",
+  },
   nav: {
     lists: "Listas",
     tasks: "Tareas",

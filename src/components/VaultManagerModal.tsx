@@ -120,7 +120,7 @@ export const VaultManagerModal: React.FC<VaultManagerModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex justify-center items-start sm:items-center overflow-y-auto p-2 sm:p-4"
+      className="fixed inset-0 top-[var(--tb)] z-50 bg-black/75 backdrop-blur-md flex justify-center items-start sm:items-center overflow-y-auto p-2 sm:p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -133,7 +133,7 @@ export const VaultManagerModal: React.FC<VaultManagerModalProps> = ({
               <FolderLock size={18} />
             </div>
             <div>
-              <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <h3 className="text-sm sm:text-base font-serif font-semibold text-slate-900 dark:text-white flex items-center gap-2">
                 <span>{t("vaultManager.title")}</span>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700">
                   {vaults.length}

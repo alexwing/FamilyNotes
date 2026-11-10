@@ -119,7 +119,7 @@ export const ProductCatalogModal: React.FC<ProductCatalogModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/70 dark:bg-black/85 backdrop-blur-md flex justify-center items-start sm:items-center overflow-y-auto p-2 sm:p-4"
+      className="fixed inset-0 top-[var(--tb)] z-50 bg-black/70 dark:bg-black/85 backdrop-blur-md flex justify-center items-start sm:items-center overflow-y-auto p-2 sm:p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -132,7 +132,7 @@ export const ProductCatalogModal: React.FC<ProductCatalogModalProps> = ({
               <BookOpen size={18} />
             </div>
             <div>
-              <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <h3 className="text-sm sm:text-base font-serif font-semibold text-slate-900 dark:text-white flex items-center gap-2">
                 <span>{t("catalog.title")}</span>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/10 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-500/20 dark:border-purple-500/30">
                   {t("catalog.productCount", { count: customCatalog.length + BUILTIN_DICTIONARY.length })}
