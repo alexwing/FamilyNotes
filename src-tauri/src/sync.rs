@@ -1,9 +1,44 @@
+// Remote vault synchronisation over explicit FTPS (AUTH TLS).
+//
+// The server (vsftpd) refuses plain-FTP logins, so every session upgrades the
+// control channel with AUTH TLS before USER/PASS, and protects the data channel
+// too (PBSZ 0 / PROT P, done by suppaftp's `into_secure`) in passive mode.
+//
+// The certificate is validated against the public Mozilla roots and the
+// configured host name (e.g. `cloud.mappuzzle.xyz`; an IP address will not
+// match the certificate). There is deliberately no way to disable that check.
+// The TLS stack is rustls with the `ring` provider (TLS 1.2+ only), so Android
+// does not need OpenSSL.
 use std::io::Cursor;
-use suppaftp::FtpStream;
-use crate::models::SyncConfig;
+use std::net::{SocketAddr, TcpStream, ToSocketAddrs};
+use std::sync::Arc;
+use std::time::Duration;
 
-const HTACCESS: &str = "<IfModule mod_authz_core.c>\n    Require all denied\n</IfModule>\n<IfModule !mod_authz_core.c>\n    Order allow,deny\n    Deny from all\n</IfModule>\nOptions -Indexes\n";
+use suppaftp::rustls::{self, ClientConfig, RootCertStore};
+use suppaftp::types::FileType;
+use suppaftp::{FtpError, FtpResult, RustlsConnector, RustlsFtpStream};
+
+use crate::models::{migrate_protocol, SyncConfig, PROTOCOL_FTPS};
+
+type FtpStream = RustlsFtpStream;
+
+const HTACCESS: &str = "<IfModule mod_authz_core.c>
+    Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+</IfModule>
+Options -Indexes
+";
 const DEFAULT_FILE: &str = "family_notes.fnvault";
+
+/// Connect and per-read/write limits, so a stuck exchange fails fast instead of
+/// freezing sync until the server's idle timeout. With FTPS, suppaftp starts
+/// the data-channel TLS handshake before reading the command reply, so a data
+/// command the server rejects would otherwise hang.
+const CONNECT_TIMEOUT: Duration = Duration::from_secs(15);
+const IO_TIMEOUT: Duration = Duration::from_secs(30);
 
 fn remote_file(cfg: &SyncConfig) -> String {
     let file = cfg.remote_file.trim();
@@ -14,19 +49,83 @@ fn remote_file(cfg: &SyncConfig) -> String {
     }
 }
 
+/// TLS 1.2 and 1.3 only (rustls' safe defaults), Mozilla roots, host-name
+/// verification always on.
+fn tls_connector() -> Result<RustlsConnector, String> {
+    let roots = RootCertStore::from_iter(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
+    // Explicit provider: never depends on a process-wide default being installed.
+    let provider = Arc::new(rustls::crypto::ring::default_provider());
+    let config = ClientConfig::builder_with_provider(provider)
+        .with_safe_default_protocol_versions()
+        .map_err(|e| format!("sync_tls_failed: {}", e))?
+        .with_root_certificates(roots)
+        .with_no_client_auth();
+    Ok(RustlsConnector::from(Arc::new(config)))
+}
+
+fn tcp_with_timeouts(addr: SocketAddr) -> std::io::Result<TcpStream> {
+    let stream = TcpStream::connect_timeout(&addr, CONNECT_TIMEOUT)?;
+    stream.set_read_timeout(Some(IO_TIMEOUT))?;
+    stream.set_write_timeout(Some(IO_TIMEOUT))?;
+    Ok(stream)
+}
+
+/// Control connection, trying every resolved address in order: a host may
+/// publish IPv6 while the FTP daemon only listens on IPv4.
+fn control_stream(host: &str, port: u16) -> Result<TcpStream, String> {
+    let addrs = (host, port)
+        .to_socket_addrs()
+        .map_err(|e| format!("sync_connect_failed: {}", e))?;
+    let mut last_err = None;
+    for addr in addrs {
+        match tcp_with_timeouts(addr) {
+            Ok(stream) => return Ok(stream),
+            Err(e) => last_err = Some(e),
+        }
+    }
+    Err(match last_err {
+        Some(e) => format!("sync_connect_failed: {}", e),
+        None => "sync_connect_failed: no address".to_string(),
+    })
+}
+
+/// Passive data connections get the same timeouts as the control channel.
+fn data_stream(addr: SocketAddr) -> FtpResult<TcpStream> {
+    tcp_with_timeouts(addr).map_err(FtpError::ConnectionError)
+}
+
 fn connect(cfg: &SyncConfig) -> Result<FtpStream, String> {
     let host = cfg.host.trim();
     if host.is_empty() {
         return Err("sync_host_required".to_string());
     }
-    let addr = format!("{}:{}", host, cfg.port);
-    let mut ftp = FtpStream::connect(&addr).map_err(|e| format!("sync_connect_failed: {}", e))?;
+    if migrate_protocol(&cfg.protocol) != PROTOCOL_FTPS {
+        return Err("sync_protocol_invalid".to_string());
+    }
+    let stream = control_stream(host, cfg.port)?;
+    let ftp = FtpStream::connect_with_stream(stream)
+        .map_err(|e| format!("sync_connect_failed: {}", e))?
+        .passive_stream_builder(data_stream);
+    // AUTH TLS + handshake (certificate and host name checked here), then
+    // PBSZ 0 / PROT P so listings and transfers are encrypted as well.
+    let mut ftp = ftp
+        .into_secure(tls_connector()?, host)
+        .map_err(|e| format!("sync_tls_failed: {}", e))?;
     ftp.login(cfg.username.trim(), &cfg.password)
         .map_err(|e| format!("sync_auth_failed: {}", e))?;
+    // The vault is binary; never let the server apply ASCII conversions.
+    ftp.transfer_type(FileType::Binary)
+        .map_err(|e| format!("sync_connect_failed: {}", e))?;
     Ok(ftp)
 }
 
 fn enter_dir(ftp: &mut FtpStream, dir: &str) -> Result<(), String> {
+    enter_dir_with(ftp, dir, true)
+}
+
+/// Same as `enter_dir`; with `create == false` a missing segment is an error
+/// instead of being created (read-only probing).
+fn enter_dir_with(ftp: &mut FtpStream, dir: &str, create: bool) -> Result<(), String> {
     let raw = dir.trim();
     if raw.is_empty() {
         return Ok(());
@@ -56,6 +155,9 @@ fn enter_dir(ftp: &mut FtpStream, dir: &str) -> Result<(), String> {
 
     for part in target.split('/').filter(|p| !p.is_empty()) {
         if ftp.cwd(part).is_err() {
+            if !create {
+                return Err(format!("sync_cwd_failed: {}", part));
+            }
             ftp.mkdir(part).map_err(|e| format!("sync_mkdir_failed: {}", e))?;
             ftp.cwd(part).map_err(|e| format!("sync_cwd_failed: {}", e))?;
         }
@@ -110,11 +212,53 @@ pub fn upload(cfg: &SyncConfig, bytes: &[u8]) -> Result<(), String> {
 mod tests {
     use super::*;
 
+    #[test]
+    fn protocol_migrates_legacy_values_to_ftps() {
+        for legacy in ["", "ftp", "FTP", " ftp ", "ftps", "FTPS"] {
+            assert_eq!(migrate_protocol(legacy), PROTOCOL_FTPS, "value {legacy:?}");
+        }
+        assert_eq!(migrate_protocol("sftp"), "sftp");
+    }
+
+    #[test]
+    fn sync_config_deserialization_migrates_protocol() {
+        let legacy = r#"{"enabled":true,"protocol":"ftp","host":"h","port":21,"username":"u",
+            "password":"p","remoteDir":"d","remoteFile":"f","autoSync":true}"#;
+        let cfg: SyncConfig = serde_json::from_str(legacy).unwrap();
+        assert_eq!(cfg.protocol, PROTOCOL_FTPS);
+
+        let missing = r#"{"enabled":true,"host":"h","port":21,"username":"u",
+            "password":"p","remoteDir":"d","remoteFile":"f","autoSync":true}"#;
+        let cfg: SyncConfig = serde_json::from_str(missing).unwrap();
+        assert_eq!(cfg.protocol, PROTOCOL_FTPS);
+
+        assert_eq!(SyncConfig::default().protocol, PROTOCOL_FTPS);
+        let reserialized = serde_json::to_string(&cfg).unwrap();
+        assert!(reserialized.contains(r#""protocol":"ftps""#));
+    }
+
+    #[test]
+    fn unknown_protocol_is_rejected_before_connecting() {
+        let cfg = SyncConfig {
+            host: "example.invalid".to_string(),
+            protocol: "sftp".to_string(),
+            ..SyncConfig::default()
+        };
+        assert_eq!(connect(&cfg).err().as_deref(), Some("sync_protocol_invalid"));
+    }
+
+    #[test]
+    fn tls_connector_builds() {
+        assert!(tls_connector().is_ok());
+    }
+
+    /// Live config from env vars only (never from files). The host must be the
+    /// certificate's name (cloud.mappuzzle.xyz), not an IP.
     fn cfg_from_env() -> Option<SyncConfig> {
         Some(SyncConfig {
             enabled: true,
             auto_sync: false,
-            protocol: "ftp".to_string(),
+            protocol: PROTOCOL_FTPS.to_string(),
             host: std::env::var("FAMILYNOTES_FTP_HOST").ok()?,
             port: std::env::var("FAMILYNOTES_FTP_PORT")
                 .ok()
@@ -122,24 +266,70 @@ mod tests {
                 .unwrap_or(21),
             username: std::env::var("FAMILYNOTES_FTP_USER").ok()?,
             password: std::env::var("FAMILYNOTES_FTP_PASS").ok()?,
-            remote_dir: std::env::var("FAMILYNOTES_FTP_DIR")
-                .unwrap_or_else(|_| "public_html/familyNotes".to_string()),
+            remote_dir: std::env::var("FAMILYNOTES_FTP_DIR").unwrap_or_default(),
             remote_file: "family_notes_synctest.bin".to_string(),
         })
     }
 
+    /// Read-only: logs in over FTPS and lists the configured directory
+    /// (without creating it). Writes nothing.
     #[test]
-    #[ignore = "requires live FTP credentials in FAMILYNOTES_FTP_* env vars"]
-    fn ftp_round_trip() {
-        let Some(cfg) = cfg_from_env() else {
-            eprintln!("skipping ftp_round_trip: FAMILYNOTES_FTP_* not set");
-            return;
+    #[ignore = "requires live FTPS credentials in FAMILYNOTES_FTP_* env vars"]
+    fn ftps_list_remote_dir() {
+        let cfg = cfg_from_env().expect("FAMILYNOTES_FTP_HOST/USER/PASS must be set");
+        let mut ftp = connect(&cfg).expect("FTPS connect + login");
+        enter_dir_with(&mut ftp, &cfg.remote_dir, false).expect("cwd");
+        let pwd = ftp.pwd().expect("pwd");
+        let names = ftp.nlst(None).expect("NLST over protected data channel");
+        eprintln!("FTPS OK, {} entries in {}:", names.len(), pwd);
+        for name in &names {
+            eprintln!("  {name}");
+        }
+        let _ = ftp.quit();
+    }
+
+    /// Full upload/download through the public API, confined to a fresh
+    /// temporary subdirectory that is removed afterwards (file, its .htaccess
+    /// guard, then the directory). Never touches real vaults or .htaccess.
+    #[test]
+    #[ignore = "requires live FTPS credentials in FAMILYNOTES_FTP_* env vars"]
+    fn ftps_round_trip_in_temp_dir() {
+        let base = cfg_from_env().expect("FAMILYNOTES_FTP_HOST/USER/PASS must be set");
+        let temp_name = format!("fn-synctest-{}", uuid::Uuid::new_v4().simple());
+        let base_dir = base.remote_dir.trim().trim_matches('/').to_string();
+        let mut cfg = base.clone();
+        cfg.remote_dir = if base_dir.is_empty() {
+            temp_name.clone()
+        } else {
+            format!("{base_dir}/{temp_name}")
         };
+
+        // The temp dir must not exist yet: we only ever delete what we created.
+        {
+            let mut ftp = connect(&cfg).expect("connect");
+            enter_dir_with(&mut ftp, &base.remote_dir, false).expect("cwd base");
+            assert!(ftp.cwd(&temp_name).is_err(), "temp dir unexpectedly exists");
+            let _ = ftp.quit();
+        }
+
         test_connection(&cfg).expect("connection");
-        let payload = b"familynotes-sync-roundtrip-check".to_vec();
-        upload(&cfg, &payload).expect("upload");
-        let fetched = download(&cfg).expect("download").expect("file should exist");
-        assert_eq!(fetched, payload);
+        assert_eq!(download(&cfg).expect("download (empty)"), None);
+        let payload = b"familynotes-ftps-roundtrip-check".to_vec();
+        let result = upload(&cfg, &payload).and_then(|_| download(&cfg));
+
+        // Cleanup always runs, before asserting.
+        let mut ftp = connect(&cfg).expect("connect for cleanup");
+        enter_dir_with(&mut ftp, &base.remote_dir, false).expect("cwd base");
+        ftp.cwd(&temp_name).expect("cwd temp");
+        let rm_file = ftp.rm(&remote_file(&cfg));
+        let rm_guard = ftp.rm(".htaccess");
+        ftp.cdup().expect("cdup");
+        let rm_dir = ftp.rmdir(&temp_name);
+        let _ = ftp.quit();
+
+        assert_eq!(result.expect("upload + download"), Some(payload));
+        rm_file.expect("remove temp file");
+        rm_guard.expect("remove temp .htaccess");
+        rm_dir.expect("remove temp dir");
     }
 }
-

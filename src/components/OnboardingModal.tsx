@@ -96,7 +96,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
       if (data.host) {
         const config: SyncConfig = {
           enabled: true,
-          protocol: data.proto || "ftp",
+          protocol: data.proto || "ftps",
           host: data.host,
           port: data.port || 21,
           username: data.user || "",

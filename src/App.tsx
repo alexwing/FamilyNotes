@@ -1784,7 +1784,7 @@ export function App() {
         syncConfig={
           vaultData?.sync || {
             enabled: false,
-            protocol: "ftp",
+            protocol: "ftps",
             host: "",
             port: 21,
             username: "",

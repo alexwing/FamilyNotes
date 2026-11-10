@@ -223,7 +223,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         setSyncForm((prev) => ({
           ...prev,
           enabled: true,
-          protocol: data.proto || "ftp",
+          protocol: data.proto || "ftps",
           host: data.host,
           port: data.port || 21,
           username: data.user || "",

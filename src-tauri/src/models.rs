@@ -137,10 +137,37 @@ pub struct FamilyMember {
     pub color: String,
 }
 
+pub const PROTOCOL_FTPS: &str = "ftps";
+
+fn default_protocol() -> String {
+    PROTOCOL_FTPS.to_string()
+}
+
+/// Maps the legacy plain-FTP markers ("ftp", "") to "ftps"; anything else is
+/// kept as-is (lower-cased) so the sync layer can reject it explicitly.
+pub fn migrate_protocol(value: &str) -> String {
+    match value.trim().to_ascii_lowercase().as_str() {
+        "" | "ftp" | "ftps" => default_protocol(),
+        other => other.to_string(),
+    }
+}
+
+fn deserialize_protocol<'de, D>(deserializer: D) -> Result<String, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let raw = Option::<String>::deserialize(deserializer)?.unwrap_or_default();
+    Ok(migrate_protocol(&raw))
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct SyncConfig {
     pub enabled: bool,
+    /// Always "ftps" (explicit FTPS, AUTH TLS). Legacy values ("ftp" or empty,
+    /// from vaults and QR codes made before FTPS) are migrated on load, since
+    /// the server no longer accepts plain-FTP logins. See `migrate_protocol`.
+    #[serde(default = "default_protocol", deserialize_with = "deserialize_protocol")]
     pub protocol: String,
     pub host: String,
     pub port: u16,
@@ -155,7 +182,7 @@ impl Default for SyncConfig {
     fn default() -> Self {
         Self {
             enabled: false,
-            protocol: "ftp".to_string(),
+            protocol: default_protocol(),
             host: String::new(),
             port: 21,
             username: String::new(),
