@@ -279,7 +279,7 @@ const es = {
   settings: {
     title: "Ajustes",
     tabGeneral: "General",
-    tabFtp: "Sincronización FTP",
+    tabFtp: "Sincronización FTPS",
     tabSecurity: "Seguridad",
     tabFamily: "Familia",
     general: {
@@ -319,9 +319,9 @@ const es = {
       modulesAtLeastOne: "Al menos una pestaña debe permanecer activa",
     },
     ftp: {
-      title: "Configuración del Servidor FTP",
+      title: "Configuración del Servidor FTPS",
       subtitle: "Sincroniza tus listas y notas entre dispositivos a través de tu propio hosting.",
-      enabledLabel: "Activar sincronización FTP",
+      enabledLabel: "Activar sincronización FTPS",
       autoSyncLabel: "Sincronización automática",
       autoSyncDesc: "Sincroniza los cambios con el servidor al crear o editar elementos.",
       serverLabel: "Servidor / Host",
@@ -339,6 +339,7 @@ const es = {
       protocolLabel: "Protocolo",
       protocolFtp: "FTP (Estándar)",
       protocolFtps: "FTPS (TLS Explícito)",
+      tlsNote: "Conexión cifrada con TLS 1.2+ y certificado del servidor verificado. Usa el nombre del servidor (no una IP) para que el certificado coincida.",
       statusInactive: "Inactiva (completa los datos del servidor)",
       statusActive: "Activa (conectado al servidor)",
       testBtn: "Probar Conexión",

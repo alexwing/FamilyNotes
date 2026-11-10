@@ -717,6 +717,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 />
               </div>
 
+              {/* Protocol (FTPS only) */}
+              <div className="flex items-start gap-2.5 p-3 bg-emerald-500/10 border border-emerald-500/25 rounded-2xl">
+                <Shield size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-bold text-slate-900 dark:text-white text-xs block">
+                    {t("settings.ftp.protocolLabel")}: {t("settings.ftp.protocolFtps")}
+                  </span>
+                  <span className="text-[11px] text-slate-600 dark:text-slate-400">
+                    {t("settings.ftp.tlsNote")}
+                  </span>
+                </div>
+              </div>
+
               <div className="grid grid-cols-3 gap-3">
                 <div className="col-span-2">
                   <label className="text-[10px] text-slate-500 dark:text-slate-400 font-bold block mb-1">

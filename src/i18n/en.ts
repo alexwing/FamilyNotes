@@ -279,7 +279,7 @@ const en = {
   settings: {
     title: "Settings",
     tabGeneral: "General",
-    tabFtp: "FTP Sync",
+    tabFtp: "FTPS Sync",
     tabSecurity: "Security",
     tabFamily: "Family",
     general: {
@@ -319,9 +319,9 @@ const en = {
       modulesAtLeastOne: "At least one tab must remain enabled",
     },
     ftp: {
-      title: "FTP Server Settings",
+      title: "FTPS Server Settings",
       subtitle: "Sync your shopping lists and notes across devices via your own FTP hosting.",
-      enabledLabel: "Enable FTP Sync",
+      enabledLabel: "Enable FTPS Sync",
       autoSyncLabel: "Automatic Synchronization",
       autoSyncDesc: "Automatically sync changes with the server when creating or editing items.",
       serverLabel: "Server / Host",
@@ -339,6 +339,7 @@ const en = {
       protocolLabel: "Protocol",
       protocolFtp: "FTP (Standard)",
       protocolFtps: "FTPS (Explicit TLS)",
+      tlsNote: "Encrypted with TLS 1.2+ and the server certificate is verified. Use the server hostname (not an IP) so the certificate matches.",
       statusInactive: "Inactive (fill in server details)",
       statusActive: "Active (connected to server)",
       testBtn: "Test Connection",
