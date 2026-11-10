@@ -993,9 +993,22 @@ pub fn sync_now(state: State<'_, VaultState>) -> Result<VaultSnapshot, String> {
     // 1. Download remote file if exists
     let remote_bytes = sync::download(&cfg)?;
 
-    if let Some(bytes) = remote_bytes {
-        let remote_str = String::from_utf8(bytes).map_err(|_| "remote_not_utf8".to_string())?;
+    // A remote file that is not even a parseable envelope (e.g. truncated by an
+    // interrupted upload) holds nothing to merge: skip it and overwrite it with
+    // the local vault below. A valid envelope we cannot decrypt still fails.
+    let remote = remote_bytes.and_then(|bytes| {
+        let parsed = String::from_utf8(bytes).ok().and_then(|s| {
+            serde_json::from_str::<VaultEnvelope>(&s)
+                .ok()
+                .map(|env| (s, env))
+        });
+        if parsed.is_none() {
+            eprintln!("sync: remote vault is corrupt or truncated; replacing it with the local copy");
+        }
+        parsed
+    });
 
+    if let Some((remote_str, remote_env)) = remote {
         // If remote file is bit-for-bit identical to our local raw contents, no merge or upload needed
         if mgr.raw_contents.as_deref() == Some(&remote_str) {
             let status = mgr.status()?;
@@ -1004,9 +1017,6 @@ pub fn sync_now(state: State<'_, VaultState>) -> Result<VaultSnapshot, String> {
                 contents: remote_str,
             });
         }
-
-        let remote_env: VaultEnvelope =
-            serde_json::from_str(&remote_str).map_err(|_| "remote_invalid_format".to_string())?;
 
         let remote_data: VaultData =
             open_payload(&remote_env.payload, &remote_env.header, &key[..])?;

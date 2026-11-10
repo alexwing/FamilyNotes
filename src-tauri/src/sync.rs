@@ -9,8 +9,8 @@
 // match the certificate). There is deliberately no way to disable that check.
 // The TLS stack is rustls with the `ring` provider (TLS 1.2+ only), so Android
 // does not need OpenSSL.
-use std::io::Cursor;
-use std::net::{SocketAddr, TcpStream, ToSocketAddrs};
+use std::io::{Read, Write};
+use std::net::{Shutdown, SocketAddr, TcpStream, ToSocketAddrs};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -205,6 +205,49 @@ pub fn download(cfg: &SyncConfig) -> Result<Option<Vec<u8>>, String> {
     Ok(bytes)
 }
 
+/// STOR `bytes` as `name` and make sure every byte reached the server.
+///
+/// suppaftp's `put_file` drops the TLS data stream right away: it writes the
+/// close_notify once and closes the socket without reading what the server
+/// sent on it (TLS 1.3 session tickets). Closing a socket with unread data
+/// makes Windows/Android send an RST, and vsFTPd then discards whatever it
+/// had not read yet, so vaults ended up truncated at 8 KiB boundaries while
+/// the server still answered 226.
+///
+/// Here the payload is written and flushed with error checks, and a duplicate
+/// handle keeps the TCP connection alive while suppaftp's TLS wrapper is
+/// dropped (that is what sends close_notify). Then we half-close (FIN), drain
+/// the socket until the server closes its side, and only then read the 226.
+fn put_bytes(ftp: &mut FtpStream, name: &str, bytes: &[u8]) -> Result<(), String> {
+    let mut stream = ftp
+        .put_with_stream(name)
+        .map_err(|e| format!("sync_upload_failed: {}", e))?;
+    let raw = stream
+        .get_ref()
+        .try_clone()
+        .map_err(|e| format!("sync_upload_failed: {}", e))?;
+
+    stream
+        .write_all(bytes)
+        .and_then(|_| stream.flush())
+        .map_err(|e| format!("sync_upload_failed: {}", e))?;
+
+    // TLS close_notify is sent here; `raw` keeps the connection open.
+    drop(stream);
+    let _ = raw.shutdown(Shutdown::Write);
+    let mut sink = [0u8; 4096];
+    let mut raw_reader = &raw;
+    while let Ok(n) = raw_reader.read(&mut sink) {
+        if n == 0 {
+            break;
+        }
+    }
+    drop(raw);
+
+    ftp.finalize_put_stream(std::io::sink())
+        .map_err(|e| format!("sync_upload_failed: {}", e))
+}
+
 pub fn upload(cfg: &SyncConfig, bytes: &[u8]) -> Result<(), String> {
     let mut ftp = connect(cfg)?;
     enter_dir(&mut ftp, &cfg.remote_dir)?;
@@ -213,13 +256,24 @@ pub fn upload(cfg: &SyncConfig, bytes: &[u8]) -> Result<(), String> {
     // overwrite one that already exists (e.g. a site's, if the vault lives
     // in a web root).
     if !list_names(&mut ftp)?.iter().any(|n| n == ".htaccess") {
-        let mut guard = Cursor::new(HTACCESS.as_bytes());
-        let _ = ftp.put_file(".htaccess", &mut guard);
+        let _ = put_bytes(&mut ftp, ".htaccess", HTACCESS.as_bytes());
     }
 
-    let mut reader = Cursor::new(bytes);
-    ftp.put_file(remote_file(cfg), &mut reader)
-        .map_err(|e| format!("sync_upload_failed: {}", e))?;
+    let file = remote_file(cfg);
+    put_bytes(&mut ftp, &file, bytes)?;
+
+    // Never report success for a partial upload: compare the size the
+    // server stored with what we sent (transfer type is binary).
+    let stored = ftp
+        .size(&file)
+        .map_err(|e| format!("sync_upload_verify_failed: {}", e))?;
+    if stored != bytes.len() {
+        return Err(format!(
+            "sync_upload_incomplete: {} of {} bytes stored",
+            stored,
+            bytes.len()
+        ));
+    }
     let _ = ftp.quit();
     Ok(())
 }
@@ -330,7 +384,9 @@ mod tests {
 
         test_connection(&cfg).expect("connection");
         assert_eq!(download(&cfg).expect("download (empty)"), None);
-        let payload = b"familynotes-ftps-roundtrip-check".to_vec();
+        // Large and not a multiple of 8 KiB: uploads used to lose their last
+        // 8 KiB blocks when the TLS data connection was torn down.
+        let payload: Vec<u8> = (0..200_003u32).map(|i| (i.wrapping_mul(31) % 251) as u8).collect();
         let result = upload(&cfg, &payload).and_then(|_| download(&cfg));
 
         // Cleanup always runs, before asserting.
