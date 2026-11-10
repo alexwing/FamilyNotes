@@ -243,9 +243,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   return (
     <div
       className="fixed inset-0 top-[var(--tb)] bg-black/75 backdrop-blur-sm z-50 flex justify-center items-start sm:items-center overflow-y-auto p-2 sm:p-4"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
     >
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-3xl max-w-xl w-full max-h-[calc(100%-1rem)] sm:max-h-[calc(100%-2rem)] flex flex-col shadow-2xl overflow-hidden my-auto shrink-0">
         {/* Modal Header */}
@@ -1096,9 +1093,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         {showQrModal && (
           <div
             className="fixed inset-0 top-[var(--tb)] bg-black/85 backdrop-blur-md z-50 flex justify-center items-start sm:items-center overflow-y-auto p-2 sm:p-4"
-            onClick={(e) => {
-              if (e.target === e.currentTarget) setShowQrModal(false);
-            }}
           >
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-3xl max-w-sm w-full p-5 sm:p-6 text-center space-y-3.5 shadow-2xl relative my-auto shrink-0 max-h-[calc(100%-1rem)] sm:max-h-[calc(100%-2rem)] overflow-y-auto">
               <button

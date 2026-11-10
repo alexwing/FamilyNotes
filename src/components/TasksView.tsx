@@ -1424,7 +1424,6 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
   const [tags, setTags] = useState<string[]>(task.tags || []);
   const [tagInput, setTagInput] = useState("");
   const [descTab, setDescTab] = useState<"edit" | "preview">("edit");
-  const isBackdropMouseDownRef = useRef(false);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -1480,15 +1479,6 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
   return (
     <div
       className="fixed inset-0 top-[var(--tb)] bg-black/60 backdrop-blur-sm z-50 flex justify-center items-start sm:items-center overflow-y-auto p-2 sm:p-4"
-      onMouseDown={(e) => {
-        isBackdropMouseDownRef.current = e.target === e.currentTarget;
-      }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget && isBackdropMouseDownRef.current) {
-          onClose();
-        }
-        isBackdropMouseDownRef.current = false;
-      }}
       onKeyDown={(e) => {
         if (e.key === "Delete" || e.key === "Backspace") {
           e.stopPropagation();
@@ -1790,7 +1780,6 @@ const ColumnManagerModal: React.FC<ColumnManagerModalProps> = ({
   // Status deletion fallback prompt state
   const [statusToDelete, setStatusToDelete] = useState<TaskStatus | null>(null);
   const [fallbackStatusId, setFallbackStatusId] = useState<string>("");
-  const isBackdropMouseDownRef = useRef(false);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -1893,15 +1882,6 @@ const ColumnManagerModal: React.FC<ColumnManagerModalProps> = ({
   return (
     <div
       className="fixed inset-0 top-[var(--tb)] bg-black/60 backdrop-blur-sm z-50 flex justify-center items-start sm:items-center overflow-y-auto p-2 sm:p-4"
-      onMouseDown={(e) => {
-        isBackdropMouseDownRef.current = e.target === e.currentTarget;
-      }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget && isBackdropMouseDownRef.current) {
-          onClose();
-        }
-        isBackdropMouseDownRef.current = false;
-      }}
       onKeyDown={(e) => {
         if (e.key === "Delete" || e.key === "Backspace") {
           e.stopPropagation();

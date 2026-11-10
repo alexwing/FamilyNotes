@@ -316,12 +316,6 @@ export const QrCameraScanner: React.FC<QrCameraScannerProps> = ({
   return (
     <div
       className="fixed inset-0 top-[var(--tb)] z-50 bg-slate-950/90 backdrop-blur-md flex justify-center items-start sm:items-center overflow-y-auto p-2 sm:p-4 animate-in fade-in duration-200"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          stopCamera();
-          onClose();
-        }
-      }}
     >
       <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full overflow-hidden shadow-2xl relative flex flex-col max-h-[calc(100%-1rem)] sm:max-h-[calc(100%-2rem)] my-auto shrink-0">
         {/* Header */}

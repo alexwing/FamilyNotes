@@ -84,7 +84,6 @@ export const NotesView: React.FC<NotesViewProps> = ({
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [pendingDeleteNote, setPendingDeleteNote] = useState<Note | null>(null);
   const [lastDeletedNote, setLastDeletedNote] = useState<Note | null>(null);
-  const isBackdropMouseDownRef = useRef(false);
 
   // Drag and drop state for reordering
   const [orderedActiveNoteIds, setOrderedActiveNoteIds] = useState<string[] | null>(null);
@@ -1064,15 +1063,6 @@ export const NotesView: React.FC<NotesViewProps> = ({
       {pendingDeleteNote && (
         <div
           className="fixed inset-0 top-[var(--tb)] bg-black/60 backdrop-blur-sm z-50 flex justify-center items-start sm:items-center overflow-y-auto p-2 sm:p-4"
-          onMouseDown={(e) => {
-            isBackdropMouseDownRef.current = e.target === e.currentTarget;
-          }}
-          onClick={(e) => {
-            if (e.target === e.currentTarget && isBackdropMouseDownRef.current) {
-              setPendingDeleteNote(null);
-            }
-            isBackdropMouseDownRef.current = false;
-          }}
         >
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-5 max-w-md w-full space-y-4 shadow-2xl text-slate-900 dark:text-white my-auto shrink-0 max-h-[calc(100%-1rem)] overflow-y-auto">
             <div>
@@ -1129,16 +1119,6 @@ export const NotesView: React.FC<NotesViewProps> = ({
       {isModalOpen && editingNote && (
         <div
           className="fixed inset-0 top-[var(--tb)] bg-black/60 backdrop-blur-sm z-50 flex justify-center items-start sm:items-center overflow-y-auto p-2 sm:p-4"
-          onMouseDown={(e) => {
-            isBackdropMouseDownRef.current = e.target === e.currentTarget;
-          }}
-          onClick={(e) => {
-            if (e.target === e.currentTarget && isBackdropMouseDownRef.current) {
-              setIsModalOpen(false);
-              setEditingNote(null);
-            }
-            isBackdropMouseDownRef.current = false;
-          }}
           onKeyDown={(e) => {
             if (e.key === "Delete" || e.key === "Backspace") {
               e.stopPropagation();

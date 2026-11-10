@@ -522,9 +522,6 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
       {isCreatingList && (
         <div
           className="fixed inset-0 top-[var(--tb)] bg-black/60 backdrop-blur-sm z-50 flex justify-center items-start sm:items-center overflow-y-auto p-2 sm:p-4"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setIsCreatingList(false);
-          }}
         >
           <form
             onSubmit={handleCreateListSubmit}
@@ -581,9 +578,6 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
       {editingList && (
         <div
           className="fixed inset-0 top-[var(--tb)] bg-black/70 backdrop-blur-sm z-50 flex justify-center items-start sm:items-center overflow-y-auto p-2 sm:p-4"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setEditingList(null);
-          }}
         >
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 sm:p-5 max-w-sm w-full space-y-4 shadow-2xl text-slate-900 dark:text-white my-auto shrink-0 max-h-[calc(100%-1rem)] overflow-y-auto">
             <div className="flex items-center justify-between">

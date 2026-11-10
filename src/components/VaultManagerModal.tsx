@@ -120,9 +120,6 @@ export const VaultManagerModal: React.FC<VaultManagerModalProps> = ({
   return (
     <div
       className="fixed inset-0 top-[var(--tb)] z-50 bg-black/75 backdrop-blur-md flex justify-center items-start sm:items-center overflow-y-auto p-2 sm:p-4"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
     >
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-3xl max-w-lg w-full max-h-[calc(100%-1rem)] sm:max-h-[calc(100%-2rem)] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 my-auto shrink-0">
         {/* Header */}
