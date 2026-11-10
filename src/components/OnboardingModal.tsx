@@ -101,7 +101,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
           port: data.port || 21,
           username: data.user || "",
           password: data.pass || "",
-          remoteDir: data.dir || "familynotes",
+          // An empty dir is a valid choice; default only for old QRs without the field.
+          remoteDir: typeof data.dir === "string" ? data.dir.trim() : "familynotes",
           remoteFile: data.file || "vault.fnvault",
           autoSync: true,
         };
@@ -450,7 +451,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                     Host: {parsedConfig.host}:{parsedConfig.port}
                   </div>
                   <div className="text-[11px] text-slate-300 font-mono">
-                    {parsedConfig.remoteDir}/{parsedConfig.remoteFile}
+                    /{parsedConfig.remoteDir ? `${parsedConfig.remoteDir.replace(/^\/+|\/+$/g, "")}/` : ""}{parsedConfig.remoteFile}
                   </div>
                 </div>
               )}

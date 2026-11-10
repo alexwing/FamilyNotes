@@ -228,7 +228,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           port: data.port || 21,
           username: data.user || "",
           password: data.pass || "",
-          remoteDir: data.dir || "familynotes",
+          // An empty dir is a valid choice; default only for old QRs without the field.
+          remoteDir: typeof data.dir === "string" ? data.dir.trim() : "familynotes",
           remoteFile: data.file || "vault.fnvault",
         }));
         onShowToast(t("settings.ftp.qrImportedToast"), "📡");
