@@ -1043,7 +1043,7 @@ dependencies = [
 
 [[package]]
 name = "family-notes"
-version = "1.0.10"
+version = "1.1.0"
 dependencies = [
  "argon2",
  "base64 0.22.1",
